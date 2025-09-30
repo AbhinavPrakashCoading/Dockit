@@ -128,8 +128,8 @@ const Dashboard: React.FC = () => {
     image: session?.user?.image || null,
     isAuthenticated: !!session?.user,
     driveConnected: !!session?.user,
-    storageUsed: 2.4,
-    storageLimit: 15
+    storageUsed: session?.user ? 2.4 : 0, // Only show storage for authenticated users
+    storageLimit: session?.user ? 15 : 0
   };
 
   // Handle hydration
@@ -507,14 +507,14 @@ const Dashboard: React.FC = () => {
               <StatsCard
                 title="Total Documents"
                 value={documents.length.toString()}
-                change={documents.length > 0 ? "+12%" : undefined}
+                change={undefined} // Remove fake percentage changes
                 icon={FileText}
                 color="bg-gradient-to-r from-blue-500 to-blue-600"
               />
               <StatsCard
                 title="Validated"
                 value={documents.filter(d => d.status === 'validated').length.toString()}
-                change={documents.filter(d => d.status === 'validated').length > 0 ? "+8%" : undefined}
+                change={undefined} // Remove fake percentage changes
                 icon={CheckCircle}
                 color="bg-gradient-to-r from-green-500 to-green-600"
               />
@@ -527,7 +527,7 @@ const Dashboard: React.FC = () => {
               <StatsCard
                 title={user.isAuthenticated ? "Storage Used" : "Session Active"}
                 value={user.isAuthenticated ? `${user.storageUsed}GB` : "Local"}
-                change={user.isAuthenticated ? `${Math.round((user.storageUsed! / user.storageLimit!) * 100)}%` : undefined}
+                change={user.isAuthenticated && user.storageUsed! > 0 ? `${Math.round((user.storageUsed! / user.storageLimit!) * 100)}%` : undefined}
                 icon={user.isAuthenticated ? HardDrive : Shield}
                 color="bg-gradient-to-r from-orange-500 to-orange-600"
               />
@@ -745,7 +745,7 @@ const Dashboard: React.FC = () => {
         </nav>
 
         <div className="absolute bottom-4 left-4 right-4 space-y-3">
-          {!sidebarCollapsed && user.isAuthenticated && (
+          {!sidebarCollapsed && user.isAuthenticated && user.storageUsed! > 0 && (
             <>
               <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-3 rounded-lg">
                 <div className="flex items-center justify-between text-xs">
@@ -771,6 +771,13 @@ const Dashboard: React.FC = () => {
                 <ClientPWAStatusIndicator />
               </div>
             </>
+          )}
+          
+          {/* Show PWA indicator for guest users too */}
+          {!sidebarCollapsed && !user.isAuthenticated && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+              <ClientPWAStatusIndicator />
+            </div>
           )}
         </div>
       </div>
