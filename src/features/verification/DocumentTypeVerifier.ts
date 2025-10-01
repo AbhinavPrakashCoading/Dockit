@@ -46,93 +46,70 @@ export interface DocumentPattern {
 
 // Document patterns for verification
 export const DOCUMENT_PATTERNS: Record<string, DocumentPattern> = {
-  passport_photo: {
-    type: 'passport_photo',
+  // 1. PERSONAL ID DOCUMENTS
+  personal_id_document: {
+    type: 'personal_id_document',
+    textPatterns: [
+      /\b\d{4}\s\d{4}\s\d{4}\b/, // Aadhar number pattern
+      /[A-Z]{5}\d{4}[A-Z]/i, // PAN number pattern
+      /आधार|AADHAAR|Aadhaar/i,
+      /भारत सरकार|Government of India/i,
+      /जन्म तिथि|DOB|Date of Birth/i,
+      /INCOME TAX DEPARTMENT/i,
+      /PERMANENT ACCOUNT NUMBER/i,
+      /ELECTION COMMISSION|VOTER|EPIC/i,
+      /PASSPORT|REPUBLIC OF INDIA/i,
+      /DRIVING LICENCE|TRANSPORT/i
+    ],
+    requiredElements: ['photo', 'text'],
+    optionalElements: ['qr_code', 'hologram', 'signature'],
+    dimensionRatio: { min: 1.4, max: 1.8 }, // ID card ratios
+    expectedTextRegions: ['header', 'personal_info', 'footer'],
+    confidenceWeights: {
+      textMatch: 0.6,
+      elementDetection: 0.3,
+      dimensionMatch: 0.1,
+      qualityScore: 0.0
+    }
+  },
+  
+  // 2. PHOTOGRAPHS
+  photograph: {
+    type: 'photograph',
     textPatterns: [], // Photos typically don't have text
     requiredElements: ['face'],
     optionalElements: ['white_background'],
-    dimensionRatio: { min: 0.70, max: 0.90 }, // More flexible ratio for passport photos
+    dimensionRatio: { min: 0.6, max: 1.2 }, // Flexible ratio for photos
     expectedTextRegions: [],
     confidenceWeights: {
       textMatch: 0.0, // No text expected
       elementDetection: 0.8, // High weight on face detection
-      dimensionMatch: 0.15,
-      qualityScore: 0.05
-    }
-  },
-  
-  upsc_photo: {
-    type: 'upsc_photo',
-    textPatterns: [], // Photos typically don't have text
-    requiredElements: ['face'],
-    optionalElements: ['white_background'],
-    dimensionRatio: { min: 0.70, max: 0.90 },
-    expectedTextRegions: [],
-    confidenceWeights: {
-      textMatch: 0.0,
-      elementDetection: 0.8,
-      dimensionMatch: 0.15,
-      qualityScore: 0.05
-    }
-  },
-  
-  ssc_photo: {
-    type: 'ssc_photo',
-    textPatterns: [], // Photos typically don't have text
-    requiredElements: ['face'],
-    optionalElements: ['white_background'],
-    dimensionRatio: { min: 0.70, max: 0.90 },
-    expectedTextRegions: [],
-    confidenceWeights: {
-      textMatch: 0.0,
-      elementDetection: 0.8,
-      dimensionMatch: 0.15,
-      qualityScore: 0.05
-    }
-  },
-  
-  aadhar_card: {
-    type: 'aadhar_card',
-    textPatterns: [
-      /\b\d{4}\s\d{4}\s\d{4}\b/, // Aadhar number pattern
-      /आधार|AADHAAR|Aadhaar/i,
-      /भारत सरकार|Government of India/i,
-      /जन्म तिथि|DOB|Date of Birth/i
-    ],
-    requiredElements: ['photo', 'qr_code', 'text'],
-    optionalElements: ['hologram', 'signature'],
-    dimensionRatio: { min: 1.5, max: 1.7 }, // Credit card ratio
-    expectedTextRegions: ['top_header', 'personal_info', 'bottom_footer'],
-    confidenceWeights: {
-      textMatch: 0.5,
-      elementDetection: 0.3,
       dimensionMatch: 0.1,
       qualityScore: 0.1
     }
   },
   
-  pan_card: {
-    type: 'pan_card',
+  // 3. SIGNATURE
+  signature: {
+    type: 'signature',
     textPatterns: [
-      /[A-Z]{5}\d{4}[A-Z]/i, // PAN number pattern
-      /INCOME TAX DEPARTMENT/i,
-      /PERMANENT ACCOUNT NUMBER/i,
-      /SIGNATURE|हस्ताक्षर/i
+      /SIGNATURE|SIGN|हस्ताक्षर/i
     ],
-    requiredElements: ['photo', 'signature', 'text'],
-    optionalElements: ['hologram'],
-    dimensionRatio: { min: 1.5, max: 1.7 },
-    expectedTextRegions: ['header', 'personal_details', 'signature_area'],
+    requiredElements: ['handwriting'],
+    optionalElements: ['text'],
+    dimensionRatio: { min: 2.0, max: 5.0 }, // Wide signature format
+    expectedTextRegions: ['signature_area'],
     confidenceWeights: {
-      textMatch: 0.6,
-      elementDetection: 0.2,
+      textMatch: 0.1,
+      elementDetection: 0.8,
       dimensionMatch: 0.1,
-      qualityScore: 0.1
+      qualityScore: 0.0
     }
   },
   
-  marksheet: {
-    type: 'marksheet',
+  // 4. EDUCATION QUALIFICATION CERTIFICATES
+  education_certificate: {
+    type: 'education_certificate',
     textPatterns: [
       /MARK SHEET|MARKSHEET|TRANSCRIPT|MARKS CARD/i,
       /UNIVERSITY|COLLEGE|BOARD|SCHOOL/i,
@@ -149,98 +126,118 @@ export const DOCUMENT_PATTERNS: Record<string, DocumentPattern> = {
       /\b12th\b|\bTWELFTH\b|\bXII\b/i, // 12th standard
       /CBSE|ICSE|STATE BOARD|BOARD OF/i,
       /SECONDARY|SENIOR SECONDARY|HIGHER SECONDARY/i,
-      // Additional educational keywords
       /ACADEMIC|SCHOLASTIC|EDUCATIONAL/i,
       /SEMESTER|ANNUAL|HALF YEARLY/i,
       /THEORY|PRACTICAL|INTERNAL|EXTERNAL/i,
       /MATHEMATICS|SCIENCE|ENGLISH|HINDI/i, // Common subjects
       /PHYSICS|CHEMISTRY|BIOLOGY/i,
-      /SOCIAL SCIENCE|HISTORY|GEOGRAPHY/i
+      /SOCIAL SCIENCE|HISTORY|GEOGRAPHY/i,
+      /DEGREE|DIPLOMA|BACHELOR|MASTER|PhD|DOCTORATE/i,
+      /GRADUATION|CONVOCATION/i,
+      /CONFERRED|AWARDED|GRANTED/i
     ],
     requiredElements: ['text'],
     optionalElements: ['seal', 'signature', 'watermark', 'logo'],
     expectedTextRegions: ['header', 'student_info', 'subjects_marks', 'footer', 'result_summary'],
     confidenceWeights: {
-      textMatch: 0.9, // Very high weight for text patterns in marksheets
+      textMatch: 0.9, // Very high weight for text patterns in educational certificates
       elementDetection: 0.05,
       dimensionMatch: 0.025,
       qualityScore: 0.025
     }
   },
   
-  degree_certificate: {
-    type: 'degree_certificate',
+  // 5. CASTE & CATEGORY CERTIFICATES
+  caste_category_certificate: {
+    type: 'caste_category_certificate',
     textPatterns: [
-      /DEGREE|DIPLOMA|BACHELOR|MASTER|PhD|DOCTORATE/i,
-      /UNIVERSITY|COLLEGE|INSTITUTE/i,
-      /CONFERRED|AWARDED|GRANTED/i,
-      /GRADUATION|CONVOCATION/i
+      /CASTE|CATEGORY|जाति|श्रेणी/i,
+      /SC|ST|OBC|EWS/i,
+      /SCHEDULED CASTE|SCHEDULED TRIBE/i,
+      /OTHER BACKWARD CLASS/i,
+      /ECONOMICALLY WEAKER SECTION/i,
+      /NON-CREAMY LAYER|CREAMY LAYER/i,
+      /CERTIFICATE|प्रमाण पत्र/i,
+      /GOVERNMENT|सरकार/i,
+      /DISTRICT|जिला/i,
+      /TEHSIL|तहसील/i
     ],
-    requiredElements: ['text', 'seal', 'signature'],
-    optionalElements: ['watermark', 'embossed_seal'],
-    expectedTextRegions: ['header', 'recipient_info', 'degree_details', 'authority_signatures'],
+    requiredElements: ['text', 'official_seal', 'signature'],
+    optionalElements: ['watermark', 'stamp'],
+    expectedTextRegions: ['header', 'certificate_details', 'authority_signature'],
+    confidenceWeights: {
+      textMatch: 0.8,
+      elementDetection: 0.15,
+      dimensionMatch: 0.025,
+      qualityScore: 0.025
+    }
+  },
+  
+  // 6. DOMICILE/RESIDENCE CERTIFICATE
+  domicile_certificate: {
+    type: 'domicile_certificate',
+    textPatterns: [
+      /DOMICILE|RESIDENCE|निवास/i,
+      /CERTIFICATE|प्रमाण पत्र/i,
+      /RESIDENT|निवासी/i,
+      /ADDRESS|पता/i,
+      /DISTRICT|जिला/i,
+      /STATE|राज्य/i,
+      /GOVERNMENT|सरकार/i
+    ],
+    requiredElements: ['text', 'official_seal', 'signature'],
+    optionalElements: ['watermark', 'stamp'],
+    expectedTextRegions: ['header', 'certificate_details', 'authority_signature'],
+    confidenceWeights: {
+      textMatch: 0.8,
+      elementDetection: 0.15,
+      dimensionMatch: 0.025,
+      qualityScore: 0.025
+    }
+  },
+  
+  // 7. DISABILITY CERTIFICATE
+  disability_certificate: {
+    type: 'disability_certificate',
+    textPatterns: [
+      /DISABILITY|HANDICAP|विकलांग/i,
+      /PWD|DIVYANG|दिव्यांग/i,
+      /CERTIFICATE|प्रमाण पत्र/i,
+      /MEDICAL|चिकित्सा/i,
+      /PERCENTAGE|प्रतिशत/i,
+      /GOVERNMENT|सरकार/i
+    ],
+    requiredElements: ['text', 'official_seal', 'signature'],
+    optionalElements: ['watermark', 'medical_stamp'],
+    expectedTextRegions: ['header', 'certificate_details', 'medical_details', 'authority_signature'],
+    confidenceWeights: {
+      textMatch: 0.8,
+      elementDetection: 0.15,
+      dimensionMatch: 0.025,
+      qualityScore: 0.025
+    }
+  },
+  
+  // 8. OTHER SPECIAL DOCUMENTS
+  special_document: {
+    type: 'special_document',
+    textPatterns: [
+      /MIGRATION|TRANSFER/i,
+      /CHARACTER|CONDUCT/i,
+      /EXPERIENCE|अनुभव/i,
+      /NO OBJECTION|NOC/i,
+      /CERTIFICATE|प्रमाण पत्र/i,
+      /GOVERNMENT|सरकार/i,
+      /OFFICE|कार्यालय/i
+    ],
+    requiredElements: ['text'],
+    optionalElements: ['seal', 'signature', 'stamp'],
+    expectedTextRegions: ['header', 'document_details', 'authority_signature'],
     confidenceWeights: {
       textMatch: 0.7,
       elementDetection: 0.2,
       dimensionMatch: 0.05,
       qualityScore: 0.05
-    }
-  },
-  
-  upsc_admit_card: {
-    type: 'upsc_admit_card',
-    textPatterns: [
-      /UPSC|Union Public Service Commission/i,
-      /ADMIT CARD|ADMISSION CERTIFICATE/i,
-      /CIVIL SERVICES|IAS|IPS|IFS/i,
-      /EXAMINATION|PRELIMINARY|MAINS/i,
-      /ROLL NUMBER|REGISTRATION NUMBER/i
-    ],
-    requiredElements: ['photo', 'text', 'barcode'],
-    optionalElements: ['qr_code', 'signature'],
-    expectedTextRegions: ['header', 'candidate_info', 'exam_details', 'instructions'],
-    confidenceWeights: {
-      textMatch: 0.6,
-      elementDetection: 0.2,
-      dimensionMatch: 0.1,
-      qualityScore: 0.1
-    }
-  },
-  
-  ssc_admit_card: {
-    type: 'ssc_admit_card',
-    textPatterns: [
-      /SSC|Staff Selection Commission/i,
-      /ADMIT CARD|ADMISSION CERTIFICATE/i,
-      /CGL|CHSL|MTS|JE/i,
-      /TIER-I|TIER-II|TIER-III/i,
-      /ROLL NUMBER/i
-    ],
-    requiredElements: ['photo', 'text'],
-    optionalElements: ['barcode', 'qr_code'],
-    expectedTextRegions: ['header', 'candidate_details', 'exam_info'],
-    confidenceWeights: {
-      textMatch: 0.6,
-      elementDetection: 0.2,
-      dimensionMatch: 0.1,
-      qualityScore: 0.1
-    }
-  },
-  
-  signature: {
-    type: 'signature',
-    textPatterns: [
-      /SIGNATURE|SIGN|हस्ताक्षर/i
-    ],
-    requiredElements: ['handwriting'],
-    optionalElements: ['text'],
-    dimensionRatio: { min: 2.0, max: 5.0 }, // Wide signature format
-    expectedTextRegions: ['signature_area'],
-    confidenceWeights: {
-      textMatch: 0.1,
-      elementDetection: 0.8,
-      dimensionMatch: 0.1,
-      qualityScore: 0.0
     }
   }
 };
@@ -591,20 +588,20 @@ export class DocumentTypeVerifier {
     reasons.push(`Debug - All text found: "${allText.slice(0, 200)}${allText.length > 200 ? '...' : ''}"`);
     reasons.push(`Debug - Text lines count: ${extractedText.length}, Has face: ${hasFace}`);
     
-    // Test against all patterns, but prioritize based on content type
+    // Test against all patterns, prioritize based on content type
     for (const [patternType, pattern] of Object.entries(DOCUMENT_PATTERNS)) {
       let score = 0;
       const weights = pattern.confidenceWeights;
       
       // Skip photo patterns if we detected significant text, and vice versa
-      const isPhotoPattern = ['passport_photo', 'upsc_photo', 'ssc_photo'].includes(patternType);
+      const isPhotoPattern = ['photograph'].includes(patternType);
       
       if (isPhotoPattern && isLikelyTextDocument) {
         reasons.push(`Skipping ${patternType}: Document has significant text content`);
         continue;
       }
       
-      if (!isPhotoPattern && isLikelyPhoto) {
+      if (!isPhotoPattern && isLikelyPhoto && patternType !== 'signature') {
         reasons.push(`Skipping ${patternType}: Document appears to be a photo`);
         continue;
       }
@@ -664,41 +661,51 @@ export class DocumentTypeVerifier {
       reasons.push('Low pattern matching scores, applying enhanced classification logic');
       
       if (isLikelyPhoto && hasFace) {
-        scores['passport_photo'] = 0.6; // Generic photo classification
-        reasons.push('Classified as passport_photo based on face detection and lack of text');
+        scores['photograph'] = 0.6; // Generic photo classification
+        reasons.push('Classified as photograph based on face detection and lack of text');
       } else if (isLikelyTextDocument) {
-        // Enhanced marksheet detection with multiple strategies
-        const marksheetIndicators = {
+        // Enhanced education certificate detection with multiple strategies
+        const educationIndicators = {
           educational: ['mark', 'marks', 'grade', 'result', 'examination', 'exam'],
           institutional: ['board', 'university', 'college', 'school', 'cbse', 'icse'],
           academic: ['subject', 'class', 'standard', 'percentage', 'cgpa', 'total'],
           studentInfo: ['student', 'roll', 'name', 'father'],
-          gradeLevel: ['10th', '12th', 'tenth', 'twelfth', 'x', 'xii']
+          gradeLevel: ['10th', '12th', 'tenth', 'twelfth', 'x', 'xii'],
+          certificate: ['certificate', 'marksheet', 'transcript', 'diploma']
         };
         
-        let marksheetScore = 0;
+        let educationScore = 0;
         let foundIndicators = [];
         
-        Object.entries(marksheetIndicators).forEach(([category, keywords]) => {
+        Object.entries(educationIndicators).forEach(([category, keywords]) => {
           const found = keywords.filter(keyword => 
             allText.toLowerCase().includes(keyword.toLowerCase())
           );
           if (found.length > 0) {
-            marksheetScore += found.length * 0.1;
+            educationScore += found.length * 0.1;
             foundIndicators.push(`${category}: ${found.join(', ')}`);
           }
         });
         
-        if (marksheetScore > 0.3) {
-          scores['marksheet'] = Math.min(0.4 + marksheetScore, 0.95);
-          reasons.push(`Classified as marksheet (score: ${marksheetScore.toFixed(2)}) based on indicators:`);
+        if (educationScore > 0.3) {
+          scores['education_certificate'] = Math.min(0.4 + educationScore, 0.95);
+          reasons.push(`Classified as education_certificate (score: ${educationScore.toFixed(2)}) based on indicators:`);
           foundIndicators.forEach(indicator => reasons.push(`  • ${indicator}`));
-        } else if (allText.includes('aadhar') || allText.includes('aadhaar') || /\d{4}\s\d{4}\s\d{4}/.test(allText)) {
-          scores['aadhar_card'] = 0.7;
-          reasons.push('Classified as aadhar_card based on number pattern or text content');
-        } else if (allText.includes('pan') || /[A-Z]{5}\d{4}[A-Z]/.test(allText)) {
-          scores['pan_card'] = 0.7;
-          reasons.push('Classified as pan_card based on PAN pattern or text content');
+        } else if (allText.includes('aadhar') || allText.includes('aadhaar') || /\d{4}\s\d{4}\s\d{4}/.test(allText) ||
+                   allText.includes('pan') || /[A-Z]{5}\d{4}[A-Z]/.test(allText) ||
+                   allText.includes('voter') || allText.includes('passport')) {
+          scores['personal_id_document'] = 0.7;
+          reasons.push('Classified as personal_id_document based on ID patterns or text content');
+        } else if (allText.includes('caste') || allText.includes('category') || 
+                   allText.includes('sc') || allText.includes('st') || allText.includes('obc')) {
+          scores['caste_category_certificate'] = 0.7;
+          reasons.push('Classified as caste_category_certificate based on category keywords');
+        } else if (allText.includes('domicile') || allText.includes('residence')) {
+          scores['domicile_certificate'] = 0.7;
+          reasons.push('Classified as domicile_certificate based on residence keywords');
+        } else if (allText.includes('disability') || allText.includes('handicap') || allText.includes('pwd')) {
+          scores['disability_certificate'] = 0.7;
+          reasons.push('Classified as disability_certificate based on disability keywords');
         } else {
           scores['document'] = 0.5;
           reasons.push('Classified as generic document based on text content');

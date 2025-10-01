@@ -24,30 +24,39 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { documentTypeVerifier, DocumentVerificationResult } from '@/features/verification/DocumentTypeVerifier';
-import { detectDocumentType, getDocumentConfig } from '@/features/processing/DocumentTypeProcessor';
+import { detectDocumentType, getDocumentConfig, detectDocumentSubType, getEnhancedDocumentInfo } from '@/features/processing/DocumentTypeProcessor';
 
 interface AnalysisResult {
   filename: string;
   fileSize: number;
   filenameGuess: string;
   aiVerification: DocumentVerificationResult;
+  subTypeResult: {
+    subType: string;
+    name: string;
+    confidence: number;
+    reasons: string[];
+    suggestedProcessing: string[];
+  } | null;
+  processingRecommendations: string[];
   processingTime: number;
 }
 
 const getDocumentIcon = (type: string) => {
   switch (type) {
-    case 'passport_photo':
-    case 'upsc_photo':
-    case 'ssc_photo':
+    case 'photograph':
       return <Users className="w-5 h-5" />;
-    case 'aadhar_card':
-    case 'pan_card':
+    case 'personal_id_document':
       return <CreditCard className="w-5 h-5" />;
-    case 'marksheet':
-    case 'degree_certificate':
+    case 'education_certificate':
+    case 'caste_category_certificate':
+    case 'domicile_certificate':
+    case 'disability_certificate':
       return <Award className="w-5 h-5" />;
     case 'signature':
       return <MessageSquare className="w-5 h-5" />;
+    case 'special_document':
+      return <FileImage className="w-5 h-5" />;
     default:
       return <FileText className="w-5 h-5" />;
   }
@@ -90,6 +99,19 @@ export function AIDocumentVerificationDemo() {
       // Step 2: AI-powered verification (new method)
       const aiVerification = await documentTypeVerifier.verifyDocumentType(file, filenameGuess);
       
+      // Step 3: Sub-type detection and enhanced processing recommendations
+      const fileMetadata = {
+        size: file.size,
+        width: aiVerification.dimensions.width,
+        height: aiVerification.dimensions.height
+      };
+      
+      const enhancedInfo = getEnhancedDocumentInfo(
+        aiVerification.verifiedType,
+        aiVerification.extractedData.text || [],
+        fileMetadata
+      );
+      
       const processingTime = Date.now() - startTime;
       
       const result: AnalysisResult = {
@@ -97,13 +119,16 @@ export function AIDocumentVerificationDemo() {
         fileSize: file.size,
         filenameGuess,
         aiVerification,
+        subTypeResult: enhancedInfo.subTypeResult,
+        processingRecommendations: enhancedInfo.processingRecommendations,
         processingTime
       };
       
       setResults(prev => [result, ...prev]);
       
+      const subTypeInfo = result.subTypeResult ? ` → ${result.subTypeResult.name}` : '';
       toast.success(
-        `✅ Analysis complete: ${aiVerification.verifiedType} (${Math.round(aiVerification.confidence * 100)}% confidence)`,
+        `✅ Analysis complete: ${aiVerification.verifiedType}${subTypeInfo} (${Math.round(aiVerification.confidence * 100)}% confidence)`,
         { id: file.name, duration: 4000 }
       );
       
@@ -142,7 +167,7 @@ export function AIDocumentVerificationDemo() {
         </div>
         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
           Upload documents to see our AI system analyze them using OCR, Computer Vision, and pattern matching 
-          to accurately detect document types beyond simple filename guessing.
+          to accurately detect document types and sub-types beyond simple filename guessing.
         </p>
         
         {/* Technology Stack */}
@@ -157,7 +182,7 @@ export function AIDocumentVerificationDemo() {
           </div>
           <div className="flex items-center space-x-2">
             <Zap className="w-4 h-4" />
-            <span>Pattern Matching</span>
+            <span>Sub-Type Detection</span>
           </div>
           <div className="flex items-center space-x-2">
             <Brain className="w-4 h-4" />
@@ -259,6 +284,46 @@ export function AIDocumentVerificationDemo() {
                   </div>
                 </div>
 
+                {/* Sub-Type Detection (NEW) */}
+                {result.subTypeResult && (
+                  <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Zap className="w-4 h-4 text-indigo-600" />
+                      <span className="text-sm font-medium text-indigo-700">Sub-Type Detection</span>
+                      <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">NEW</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          {getDocumentIcon(result.subTypeResult.subType)}
+                          <span className="font-medium text-indigo-900">{result.subTypeResult.name}</span>
+                        </div>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${getConfidenceColor(result.subTypeResult.confidence)}`}>
+                          {Math.round(result.subTypeResult.confidence * 100)}% match
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-indigo-600">
+                        Specific variant detected within {result.aiVerification.verifiedType} category
+                      </p>
+                      
+                      {result.subTypeResult.reasons.length > 0 && (
+                        <details className="text-xs">
+                          <summary className="cursor-pointer text-indigo-700 hover:text-indigo-800">
+                            Detection reasons ({result.subTypeResult.reasons.length})
+                          </summary>
+                          <ul className="list-disc list-inside text-indigo-600 mt-1 space-y-1 ml-4">
+                            {result.subTypeResult.reasons.map((reason, i) => (
+                              <li key={i}>{reason}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* AI Analysis Details */}
                 <div className="bg-blue-50 p-4 rounded-lg space-y-3">
                   <h4 className="font-medium text-blue-900 flex items-center space-x-2">
@@ -317,7 +382,7 @@ export function AIDocumentVerificationDemo() {
                 </div>
 
                 {/* Warnings and Recommendations */}
-                {(result.aiVerification.warnings.length > 0 || result.aiVerification.recommendations.length > 0) && (
+                {(result.aiVerification.warnings.length > 0 || result.aiVerification.recommendations.length > 0 || result.processingRecommendations.length > 0) && (
                   <div className="space-y-3">
                     {result.aiVerification.warnings.length > 0 && (
                       <div className="bg-yellow-50 p-3 rounded-lg">
@@ -337,13 +402,32 @@ export function AIDocumentVerificationDemo() {
                       <div className="bg-green-50 p-3 rounded-lg">
                         <div className="flex items-center space-x-2 mb-2">
                           <Info className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium text-green-800">Recommendations</span>
+                          <span className="text-sm font-medium text-green-800">AI Recommendations</span>
                         </div>
                         <ul className="list-disc list-inside text-sm text-green-700 space-y-1">
                           {result.aiVerification.recommendations.map((rec, i) => (
                             <li key={i}>{rec}</li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+
+                    {/* Enhanced Processing Recommendations (NEW) */}
+                    {result.processingRecommendations.length > 0 && (
+                      <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Zap className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-800">Smart Processing Recommendations</span>
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">NEW</span>
+                        </div>
+                        <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
+                          {result.processingRecommendations.map((rec, i) => (
+                            <li key={i}>{rec}</li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-blue-600 mt-2">
+                          Based on document type and sub-type analysis
+                        </p>
                       </div>
                     )}
                   </div>
