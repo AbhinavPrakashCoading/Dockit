@@ -25,12 +25,21 @@ import {
 import toast from 'react-hot-toast';
 import { documentTypeVerifier, DocumentVerificationResult } from '@/features/verification/DocumentTypeVerifier';
 import { detectDocumentType, getDocumentConfig, detectDocumentSubType, getEnhancedDocumentInfo } from '@/features/processing/DocumentTypeProcessor';
+import { AIDocumentVerificationPipeline, classify_document } from '@/features/intelligence/AIDocumentVerificationPipeline';
 
 interface AnalysisResult {
   filename: string;
   fileSize: number;
   filenameGuess: string;
   aiVerification: DocumentVerificationResult;
+  newAIPipeline?: {
+    type: string;
+    subtype: string;
+    confidence: number;
+    method: string;
+    reasons: string[];
+    cleanedText?: string;
+  };
   subTypeResult: {
     subType: string;
     name: string;
@@ -96,10 +105,29 @@ export function AIDocumentVerificationDemo() {
       // Step 1: Filename-based detection (old method)
       const filenameGuess = detectDocumentType(file.name, file.size);
       
-      // Step 2: AI-powered verification (new method)
+      // Step 2: AI-powered verification (existing method)
       const aiVerification = await documentTypeVerifier.verifyDocumentType(file, filenameGuess);
       
-      // Step 3: Sub-type detection and enhanced processing recommendations
+      // Step 3: NEW AI Document Verification Pipeline (OCR-based classification)
+      let newAIPipelineResult;
+      try {
+        if (aiVerification.extractedData.text && aiVerification.extractedData.text.length > 0) {
+          const ocrText = aiVerification.extractedData.text.join(' ');
+          const pipelineResult = classify_document(ocrText);
+          newAIPipelineResult = {
+            type: pipelineResult.type,
+            subtype: pipelineResult.subtype,
+            confidence: pipelineResult.confidence,
+            method: pipelineResult.method,
+            reasons: pipelineResult.reasons,
+            cleanedText: pipelineResult.cleanedText
+          };
+        }
+      } catch (pipelineError) {
+        console.warn('New AI Pipeline failed:', pipelineError);
+      }
+      
+      // Step 4: Sub-type detection and enhanced processing recommendations
       const fileMetadata = {
         size: file.size,
         width: aiVerification.dimensions.width,
@@ -119,6 +147,7 @@ export function AIDocumentVerificationDemo() {
         fileSize: file.size,
         filenameGuess,
         aiVerification,
+        newAIPipeline: newAIPipelineResult,
         subTypeResult: enhancedInfo.subTypeResult,
         processingRecommendations: enhancedInfo.processingRecommendations,
         processingTime
@@ -127,8 +156,9 @@ export function AIDocumentVerificationDemo() {
       setResults(prev => [result, ...prev]);
       
       const subTypeInfo = result.subTypeResult ? ` → ${result.subTypeResult.name}` : '';
+      const newAIInfo = newAIPipelineResult ? ` | New AI: ${newAIPipelineResult.type}/${newAIPipelineResult.subtype}` : '';
       toast.success(
-        `✅ Analysis complete: ${aiVerification.verifiedType}${subTypeInfo} (${Math.round(aiVerification.confidence * 100)}% confidence)`,
+        `✅ Analysis complete: ${aiVerification.verifiedType}${subTypeInfo}${newAIInfo} (${Math.round(aiVerification.confidence * 100)}% confidence)`,
         { id: file.name, duration: 4000 }
       );
       
@@ -166,12 +196,13 @@ export function AIDocumentVerificationDemo() {
           <h1 className="text-3xl font-bold text-gray-900">AI Document Verification</h1>
         </div>
         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-          Upload documents to see our AI system analyze them using OCR, Computer Vision, and pattern matching 
+          Upload documents to see our AI system analyze them using OCR, Computer Vision, and our new 
+          AI Document Verification Pipeline that combines rule-based pattern matching with ML fallback 
           to accurately detect document types and sub-types beyond simple filename guessing.
         </p>
         
         {/* Technology Stack */}
-        <div className="flex items-center justify-center space-x-6 text-sm text-gray-500 bg-gray-50 p-4 rounded-lg">
+        <div className="flex items-center justify-center space-x-4 text-sm text-gray-500 bg-gray-50 p-4 rounded-lg flex-wrap gap-y-2">
           <div className="flex items-center space-x-2">
             <Eye className="w-4 h-4" />
             <span>Computer Vision</span>
@@ -187,6 +218,10 @@ export function AIDocumentVerificationDemo() {
           <div className="flex items-center space-x-2">
             <Brain className="w-4 h-4" />
             <span>ML Classification</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Brain className="w-4 h-4 text-emerald-600" />
+            <span className="text-emerald-600 font-medium">New AI Pipeline</span>
           </div>
         </div>
       </div>
@@ -256,7 +291,7 @@ export function AIDocumentVerificationDemo() {
                 </div>
 
                 {/* Comparison: Filename vs AI */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Filename Detection */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
@@ -282,6 +317,32 @@ export function AIDocumentVerificationDemo() {
                     </div>
                     <p className="text-xs text-purple-600 mt-1">OCR + CV + Pattern Analysis</p>
                   </div>
+
+                  {/* New AI Pipeline */}
+                  {result.newAIPipeline && (
+                    <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Zap className="w-4 h-4 text-emerald-600" />
+                        <span className="text-sm font-medium text-emerald-700">New AI Pipeline</span>
+                        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">OCR-BASED</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          {getDocumentIcon(result.newAIPipeline.type.toLowerCase())}
+                          <span className="font-medium text-emerald-900">{result.newAIPipeline.type}</span>
+                        </div>
+                        <div className="text-xs text-emerald-700">
+                          Subtype: <span className="font-medium">{result.newAIPipeline.subtype}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-emerald-600">Method: {result.newAIPipeline.method}</span>
+                          <div className={`px-2 py-1 rounded-full text-xs font-medium ${getConfidenceColor(result.newAIPipeline.confidence)}`}>
+                            {Math.round(result.newAIPipeline.confidence * 100)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sub-Type Detection (NEW) */}
@@ -380,6 +441,56 @@ export function AIDocumentVerificationDemo() {
                     </div>
                   )}
                 </div>
+
+                {/* New AI Pipeline Details */}
+                {result.newAIPipeline && (
+                  <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg space-y-3">
+                    <h4 className="font-medium text-emerald-900 flex items-center space-x-2">
+                      <Zap className="w-4 h-4" />
+                      <span>New AI Pipeline Analysis</span>
+                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">OCR-BASED</span>
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-emerald-800">Document Type:</span>
+                        <p className="text-emerald-700">{result.newAIPipeline.type}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-emerald-800">Subtype:</span>
+                        <p className="text-emerald-700">{result.newAIPipeline.subtype}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-emerald-800">Classification Method:</span>
+                        <p className="text-emerald-700">{result.newAIPipeline.method}</p>
+                      </div>
+                    </div>
+
+                    {result.newAIPipeline.cleanedText && (
+                      <div>
+                        <span className="font-medium text-emerald-800">Cleaned OCR Text (preview):</span>
+                        <div className="bg-white p-2 rounded border text-xs text-gray-700 font-mono max-h-20 overflow-y-auto">
+                          {result.newAIPipeline.cleanedText.substring(0, 200)}
+                          {result.newAIPipeline.cleanedText.length > 200 && '...'}
+                        </div>
+                      </div>
+                    )}
+
+                    {result.newAIPipeline.reasons.length > 0 && (
+                      <div>
+                        <span className="font-medium text-emerald-800">Classification Reasons:</span>
+                        <ul className="list-disc list-inside text-sm text-emerald-700 space-y-1">
+                          {result.newAIPipeline.reasons.slice(0, 5).map((reason, i) => (
+                            <li key={i}>{reason}</li>
+                          ))}
+                          {result.newAIPipeline.reasons.length > 5 && (
+                            <li className="text-emerald-600">... and {result.newAIPipeline.reasons.length - 5} more reasons</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Warnings and Recommendations */}
                 {(result.aiVerification.warnings.length > 0 || result.aiVerification.recommendations.length > 0 || result.processingRecommendations.length > 0) && (
