@@ -466,13 +466,16 @@ const Dashboard: React.FC = () => {
                   }
                 </p>
               </div>
-              <Link
-                href="/upload"
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2"
+              <button
+                onClick={() => {
+                  // Generate Zip functionality to be implemented
+                  toast.success('Zip generation feature coming soon!');
+                }}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all flex items-center gap-2"
               >
-                <Plus className="w-4 h-4" />
-                New Upload
-              </Link>
+                <Archive className="w-4 h-4" />
+                Generate Zip
+              </button>
             </div>
 
             {!user.isAuthenticated && (
