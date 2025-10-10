@@ -56,13 +56,15 @@ import { DatabaseStatusIndicator } from '@/components/DatabaseStatusIndicator';
 import { PWAInstallPrompt, PWAStatusIndicator, usePWA } from '@/components/PWA';
 import { ClientPWAInstallPrompt, ClientPWAStatusIndicator } from '@/components/ClientPWA';
 import { hybridStorage } from '@/features/storage/HybridStorageService';
-import { ExamLogo } from '@/components/ExamLogo';
+import { OptimizedExamLogo } from '@/components/OptimizedExamLogo';
+import { RealExamLogo } from '@/components/RealExamLogo';
 import toast from 'react-hot-toast';
 
-// Import actual schemas
-import upscSchema from '@/schemas/upsc.json';
-import sscSchema from '@/schemas/ssc.json';
-import ieltsSchema from '@/schemas/ielts.json';
+// Import dynamic schema loader (replaces static imports)
+import { loadAvailableExams, type ExamConfig } from '@/lib/dynamicSchemaLoader';
+
+// Import performance-optimized exam registry
+import { getExamsWithSchemaStatus, getPopularExams, searchExams, getExamSchema } from '@/features/exam/optimizedExamRegistry';
 
 interface Document {
   id: string;
@@ -122,6 +124,8 @@ const Dashboard: React.FC = () => {
   // Workflow state
   const [currentStep, setCurrentStep] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<any>(null);
+  const [selectedExamSchema, setSelectedExamSchema] = useState<any>(null);
+  const [schemaLoading, setSchemaLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<{[key: string]: File}>({});
   const [processingProgress, setProcessingProgress] = useState(0);
   const [workflowSearchQuery, setWorkflowSearchQuery] = useState('');
@@ -137,50 +141,75 @@ const Dashboard: React.FC = () => {
   // 1. Import the schema file at the top: import newExamSchema from '@/schemas/newExam.json';
   // 2. Add the exam object following the structure below
   // 3. Ensure requiredDocuments match documentTypeMapping keys
-  const exams = [
-    { 
-      id: 'upsc', 
-      name: 'UPSC', 
-      category: 'Civil Services', 
-      logo: '🏛️', 
-      color: 'bg-blue-100 text-blue-600',
-      schema: upscSchema,
-      requiredDocuments: ['photo', 'signature', 'idProof', 'ageProof', 'educationCertificate', 'experienceCertificate']
-    },
-    { 
-      id: 'ssc', 
-      name: 'SSC', 
-      category: 'Government', 
-      logo: '📋', 
-      color: 'bg-green-100 text-green-600',
-      schema: sscSchema,
-      requiredDocuments: ['photo', 'signature', 'idProof', 'ageProof', 'educationCertificate']
-    },
-    { 
-      id: 'ielts', 
-      name: 'IELTS', 
-      category: 'Language Proficiency', 
-      logo: '🌍', 
-      color: 'bg-purple-100 text-purple-600',
-      schema: ieltsSchema,
-      requiredDocuments: ['photo', 'signature', 'passport', 'identityProof']
-    }];
+  // State for optimized exam loading
+  const [availableExams, setAvailableExams] = useState<any[]>([]);
+  const [popularExamsData, setPopularExamsData] = useState<any[]>([]);
+  const [dynamicExams, setDynamicExams] = useState<ExamConfig[]>([]);
+  const [examsLoading, setExamsLoading] = useState(true);
+
+  // Load optimized exams on component mount
+  useEffect(() => {
+    const loadOptimizedExams = async () => {
+      try {
+        setExamsLoading(true);
+        
+        // Load dynamic exams first (replaces legacy exams)
+        const loadedExams = await loadAvailableExams();
+        setDynamicExams(loadedExams);
+        
+        // Load optimized exam data in parallel
+        const [examsWithStatus, popularExams] = await Promise.all([
+          getExamsWithSchemaStatus(),
+          getPopularExams(8)
+        ]);
+        
+        setAvailableExams(examsWithStatus);
+        setPopularExamsData(popularExams);
+      } catch (error) {
+        console.error('Failed to load optimized exams:', error);
+        
+        // Fallback: Load dynamic exams only
+        try {
+          const fallbackExams = await loadAvailableExams();
+          setDynamicExams(fallbackExams);
+          setAvailableExams(fallbackExams.map(exam => ({ 
+            ...exam, 
+            hasSchema: true, 
+            isSchemaLoaded: true 
+          })));
+        } catch (fallbackError) {
+          console.error('Failed to load fallback exams:', fallbackError);
+          toast.error('Failed to load exam data. Please refresh the page.');
+        }
+        setPopularExamsData(legacyExams.slice(0, 4));
+      } finally {
+        setExamsLoading(false);
+      }
+    };
+
+    if (mounted) {
+      loadOptimizedExams();
+    }
+  }, [mounted]);
+
+  // Use optimized exams if available, fallback to dynamic exams
+  const exams = availableExams.length > 0 ? availableExams : dynamicExams;
 
   /*
   Example of adding a new exam:
   
-  1. Import the schema:
-     import newExamSchema from '@/schemas/newExam.json';
-  
-  2. Add to the exams array:
-     {
+  1. Add the exam configuration to dynamicSchemaLoader.ts AVAILABLE_SCHEMAS:
+     'new_exam': {
        id: 'new_exam',
        name: 'New Exam',
        category: 'Category Name',
        logo: '📝',
        color: 'bg-amber-100 text-amber-600',
-       schema: newExamSchema,
+       schemaPath: '/schemas/new-exam.json',
        requiredDocuments: ['photo', 'signature', 'idProof'] // Must match documentTypeMapping keys
+     }
+  
+  2. The schema will be loaded dynamically from the API - no imports needed!
      }
   */
 
@@ -197,24 +226,105 @@ const Dashboard: React.FC = () => {
   };
 
   // Get document types for selected exam
-  const getDocumentTypes = (exam: any) => {
-    if (!exam?.requiredDocuments) {
-      // Fallback to generic document types
-      return [
-        { id: 'id', name: 'Government ID', required: true, icon: '🪪' },
-        { id: 'marksheet', name: 'Mark Sheet', required: true, icon: '📄' },
-        { id: 'certificate', name: 'Certificate', required: true, icon: '🏆' },
-        { id: 'transcript', name: 'Transcript', required: false, icon: '📋' },
-        { id: 'recommendation', name: 'Recommendation Letter', required: false, icon: '✉️' },
-      ];
+  const getDocumentTypes = (exam: any, schema: any = null) => {
+    // Use schema if available
+    if (schema?.requirements) {
+      return schema.requirements.map((req: any) => ({
+        id: req.id,
+        name: req.displayName,
+        icon: getDocumentIcon(req.type),
+        required: req.mandatory,
+        type: req.type,
+        description: req.description,
+        format: req.format,
+        maxSizeKB: req.maxSizeKB,
+        dimensions: req.dimensions
+      }));
     }
 
-    return exam.requiredDocuments.map((docType: string) => ({
-      id: docType,
-      name: documentTypeMapping[docType]?.name || docType,
-      icon: documentTypeMapping[docType]?.icon || '📄',
-      required: documentTypeMapping[docType]?.required ?? true,
-    }));
+    // Check if exam object has requiredDocuments (legacy)
+    if (exam?.requiredDocuments) {
+      return exam.requiredDocuments.map((docType: string) => ({
+        id: docType,
+        name: documentTypeMapping[docType]?.name || docType,
+        icon: documentTypeMapping[docType]?.icon || '📄',
+        required: documentTypeMapping[docType]?.required ?? true,
+      }));
+    }
+
+    // Fallback to generic document types
+    return [
+      { id: 'id', name: 'Government ID', required: true, icon: '🪪' },
+      { id: 'marksheet', name: 'Mark Sheet', required: true, icon: '📄' },
+      { id: 'certificate', name: 'Certificate', required: true, icon: '🏆' },
+      { id: 'transcript', name: 'Transcript', required: false, icon: '📋' },
+      { id: 'recommendation', name: 'Recommendation Letter', required: false, icon: '✉️' },
+    ];
+  };
+
+  // Get icon for document type
+  const getDocumentIcon = (type: string) => {
+    const iconMap: Record<string, string> = {
+      'Photo': '📷',
+      'Signature': '✍️',
+      'ID Proof': '🪪',
+      'Age Proof': '📅',
+      'Educational Certificate': '🎓',
+      'Mark Sheet': '📄',
+      'Degree Certificate': '🏆',
+      'Character Certificate': '📋',
+      'Caste Certificate': '📜',
+      'Income Certificate': '💰',
+      'Disability Certificate': '♿',
+      'Experience Certificate': '💼',
+      'NOC': '📝',
+      'Medical Certificate': '🩺',
+      'Domicile Certificate': '🏠',
+      'Migration Certificate': '📋',
+      'Transfer Certificate': '📋',
+      'Passport': '📖',
+      'Visa': '📄',
+      'Language Proficiency': '🗣️',
+      'Transcript': '📋',
+      'Recommendation Letter': '✉️',
+      'Statement of Purpose': '📝',
+      'Resume': '📄',
+      'Portfolio': '🎨'
+    };
+    return iconMap[type] || '📄';
+  };
+
+  // Handle exam selection with schema loading
+  const handleExamSelection = async (exam: any) => {
+    console.log('🎯 Exam selected:', exam);
+    setSelectedExam(exam);
+    setSelectedExamSchema(null);
+    setSchemaLoading(true);
+
+    try {
+      if (exam.hasSchema) {
+        console.log('📋 Loading schema for:', exam.id);
+        const schema = await getExamSchema(exam.id);
+        
+        if (schema) {
+          console.log('✅ Schema loaded successfully:', schema);
+          console.log('📄 Requirements found:', schema.requirements?.length || 0);
+          setSelectedExamSchema(schema);
+          toast.success(`Schema loaded for ${exam.name}`);
+        } else {
+          console.log('❌ No schema returned for:', exam.id);
+          toast.error(`No schema available for ${exam.name}`);
+        }
+      } else {
+        console.log('ℹ️ No schema available for:', exam.id);
+        toast.error(`Schema not available for ${exam.name}`);
+      }
+    } catch (error) {
+      console.error('💥 Schema loading failed:', error);
+      toast.error(`Failed to load requirements for ${exam.name}`);
+    } finally {
+      setSchemaLoading(false);
+    }
   };
 
   const schemaComparison = [
@@ -273,16 +383,39 @@ const Dashboard: React.FC = () => {
     { name: 'Transcript.pdf', progress: 0, status: 'queued' },
   ];
 
-  // Filter exams based on search (only show exams with schemas for safety)
-  const filteredExams = exams
-    .filter(exam => exam.schema) // Extra safety: only show exams with schemas
-    .filter(exam =>
-      exam.name.toLowerCase().includes(workflowSearchQuery.toLowerCase()) ||
-      exam.category.toLowerCase().includes(workflowSearchQuery.toLowerCase())
-    );
+  // Filter exams based on search (optimized)
+  const [filteredExams, setFilteredExams] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const filterExams = async () => {
+      if (!workflowSearchQuery.trim()) {
+        setFilteredExams(exams.filter(exam => exam.hasSchema || exam.schema));
+        return;
+      }
+      
+      try {
+        const searchResults = await searchExams(workflowSearchQuery);
+        setFilteredExams(searchResults);
+      } catch (error) {
+        console.error('Search failed:', error);
+        // Fallback to local filtering
+        const localFiltered = exams
+          .filter(exam => exam.hasSchema || exam.schema)
+          .filter(exam =>
+            exam.name.toLowerCase().includes(workflowSearchQuery.toLowerCase()) ||
+            exam.category.toLowerCase().includes(workflowSearchQuery.toLowerCase())
+          );
+        setFilteredExams(localFiltered);
+      }
+    };
 
-  // Popular exams (showing all available schema-enabled exams)
-  const popularExams = exams.filter(exam => exam.schema).slice(0, 4);
+    filterExams();
+  }, [workflowSearchQuery, exams]);
+
+  // Popular exams (use optimized data if available)
+  const popularExams = popularExamsData.length > 0 
+    ? popularExamsData 
+    : exams.filter(exam => exam.hasSchema || exam.schema).slice(0, 4);
 
   // Initialize storage service
   // Storage service for API communication
@@ -1208,16 +1341,26 @@ const Dashboard: React.FC = () => {
 
             {/* Search Bar */}
             <div className="p-6 border-b border-gray-200 flex-shrink-0">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search exams..."
-                  value={workflowSearchQuery}
-                  onChange={(e) => setWorkflowSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  autoComplete="off"
-                />
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search exams..."
+                    value={workflowSearchQuery}
+                    onChange={(e) => setWorkflowSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    autoComplete="off"
+                  />
+                </div>
+                <button
+                  disabled
+                  className="px-4 py-3 bg-gray-100 text-gray-400 border border-gray-300 rounded-lg cursor-not-allowed transition-colors flex items-center gap-2 whitespace-nowrap"
+                  title="Request Schema (Coming Soon)"
+                >
+                  <Plus size={16} />
+                  Request Schema
+                </button>
               </div>
             </div>
 
@@ -1227,25 +1370,36 @@ const Dashboard: React.FC = () => {
               {!workflowSearchQuery && (
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold mb-4">Popular Exams</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {popularExams.map(exam => (
+                  {examsLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="bg-gray-100 rounded-lg p-4 animate-pulse">
+                          <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {popularExams.map(exam => (
                       <button
                         key={exam.id}
                         onClick={() => {
-                          setSelectedExam(exam);
+                          handleExamSelection(exam);
                           setCurrentStep('upload');
                         }}
                         className="p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition text-center"
                       >
                         <div className={`w-16 h-16 ${exam.color} rounded-full flex items-center justify-center mx-auto mb-2 relative`}>
-                          <ExamLogo 
+                          <RealExamLogo 
                             examId={exam.id} 
                             examName={exam.name}
-                            fallbackEmoji={exam.logo}
                             size={48}
                             className="rounded-full"
+                            variant="card"
+                            priority={true}
                           />
-                          {exam.schema && (
+                          {(exam.hasSchema || exam.schema) && (
                             <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                               <CheckCircle className="w-4 h-4 text-white" />
                             </div>
@@ -1253,12 +1407,13 @@ const Dashboard: React.FC = () => {
                         </div>
                         <p className="font-semibold">{exam.name}</p>
                         <p className="text-xs text-gray-500">{exam.category}</p>
-                        {exam.schema && (
+                        {(exam.hasSchema || exam.schema) && (
                           <p className="text-xs text-green-600 mt-1">✓ Schema Available</p>
                         )}
                       </button>
                     ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1267,26 +1422,40 @@ const Dashboard: React.FC = () => {
                 <h3 className="text-lg font-semibold mb-4">
                   {workflowSearchQuery ? `Search Results for "${workflowSearchQuery}"` : 'All Exams'}
                 </h3>
-                {filteredExams.length > 0 ? (
+                {examsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                      <div key={i} className="p-4 border border-gray-200 rounded-lg animate-pulse">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+                          <div className="flex-1">
+                            <div className="h-5 bg-gray-200 rounded mb-2"></div>
+                            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredExams.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {filteredExams.map(exam => (
                       <button
                         key={exam.id}
                         onClick={() => {
-                          setSelectedExam(exam);
+                          handleExamSelection(exam);
                           setCurrentStep('upload');
                         }}
                         className="p-4 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition flex items-center gap-4"
                       >
                         <div className={`w-12 h-12 ${exam.color} rounded-lg flex items-center justify-center flex-shrink-0 relative`}>
-                          <ExamLogo 
+                          <RealExamLogo 
                             examId={exam.id} 
                             examName={exam.name}
-                            fallbackEmoji={exam.logo}
                             size={32}
                             className="rounded-lg"
+                            variant="list"
                           />
-                          {exam.schema && (
+                          {(exam.hasSchema || exam.schema) && (
                             <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
                               <CheckCircle className="w-3 h-3 text-white" />
                             </div>
@@ -1295,7 +1464,7 @@ const Dashboard: React.FC = () => {
                         <div className="text-left">
                           <p className="font-semibold">{exam.name}</p>
                           <p className="text-sm text-gray-500">{exam.category}</p>
-                          {exam.schema && (
+                          {(exam.hasSchema || exam.schema) && (
                             <p className="text-xs text-green-600">✓ Schema Available</p>
                           )}
                         </div>
@@ -1330,7 +1499,11 @@ const Dashboard: React.FC = () => {
                 </button>
                 <div>
                   <h2 className="text-xl font-bold">Upload Documents</h2>
-                  <p className="text-sm text-gray-500">For {selectedExam?.name}</p>
+                  <p className="text-sm text-gray-500">
+                    For {selectedExam?.name}
+                    {schemaLoading && <span> - Loading requirements...</span>}
+                    {selectedExamSchema && <span> ✓ Schema loaded</span>}
+                  </p>
                 </div>
               </div>
               <button
@@ -1343,56 +1516,95 @@ const Dashboard: React.FC = () => {
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {selectedExam && getDocumentTypes(selectedExam).map((docType: { id: string; name: string; icon: string; required: boolean }) => (
-                  <div key={docType.id} className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{docType.icon}</span>
-                      <h3 className="font-semibold">{docType.name}</h3>
-                      {docType.required && (
-                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Required</span>
+              {/* Debug Info - Remove in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-6 text-sm">
+                  <div className="font-semibold mb-2">🔧 Debug Info:</div>
+                  <div>Selected Exam: {selectedExam?.name || 'None'}</div>
+                  <div>Has Schema Flag: {selectedExam?.hasSchema ? '✅' : '❌'}</div>
+                  <div>Schema Loading: {schemaLoading ? '⏳' : '✅'}</div>
+                  <div>Schema Loaded: {selectedExamSchema ? '✅' : '❌'}</div>
+                  <div>Requirements Count: {selectedExamSchema?.requirements?.length || 0}</div>
+                  <div>Document Types Generated: {selectedExam ? getDocumentTypes(selectedExam, selectedExamSchema).length : 0}</div>
+                </div>
+              )}
+
+              {schemaLoading && (
+                <div className="text-center py-8">
+                  <Loader className="animate-spin mx-auto mb-4 text-purple-600" size={32} />
+                  <p className="text-gray-500">Loading exam requirements...</p>
+                </div>
+              )}
+              
+              {!schemaLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {selectedExam && getDocumentTypes(selectedExam, selectedExamSchema).map((docType: { id: string; name: string; icon: string; required: boolean; description?: string; format?: string; maxSizeKB?: number }) => (
+                    <div key={docType.id} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{docType.icon}</span>
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{docType.name}</h3>
+                          {docType.description && (
+                            <p className="text-xs text-gray-500">{docType.description}</p>
+                          )}
+                        </div>
+                        {docType.required && (
+                          <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Required</span>
+                        )}
+                        {selectedExamSchema && (
+                          <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">Schema Validated</span>
+                        )}
+                      </div>
+                      
+                      {/* Show format requirements if available */}
+                      {(docType.format || docType.maxSizeKB) && (
+                        <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                          {docType.format && <span>Format: {docType.format} </span>}
+                          {docType.maxSizeKB && <span>Max Size: {docType.maxSizeKB}KB</span>}
+                        </div>
                       )}
-                      {selectedExam?.schema && (
-                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">Schema Validated</span>
+                      
+                      {uploadedFiles[docType.id] ? (
+                        <div className="border-2 border-green-500 bg-green-50 rounded-lg p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle className="text-green-600" size={24} />
+                            <div>
+                              <p className="font-medium text-green-900">{uploadedFiles[docType.id].name}</p>
+                              <p className="text-sm text-green-600">Uploaded successfully</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const newFiles = { ...uploadedFiles };
+                              delete newFiles[docType.id];
+                              setUploadedFiles(newFiles);
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition min-h-[140px]">
+                          <Upload className="text-gray-400 mb-2" size={32} />
+                          <p className="text-sm text-gray-600 mb-1 text-center">Click to upload or drag and drop</p>
+                          <p className="text-xs text-gray-400 text-center">
+                            {docType.format ? `${docType.format}` : 'PDF, JPG, PNG'} 
+                            {docType.maxSizeKB ? ` (Max ${docType.maxSizeKB}KB)` : ' (Max 10MB)'}
+                          </p>
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => e.target.files && handleFileUpload(docType.id, e.target.files)}
+                            accept={docType.format ? `.${docType.format.toLowerCase()}` : '.pdf,.jpg,.jpeg,.png'}
+                          />
+                        </label>
                       )}
                     </div>
-                    
-                    {uploadedFiles[docType.id] ? (
-                      <div className="border-2 border-green-500 bg-green-50 rounded-lg p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <CheckCircle className="text-green-600" size={24} />
-                          <div>
-                            <p className="font-medium text-green-900">{uploadedFiles[docType.id].name}</p>
-                            <p className="text-sm text-green-600">Uploaded successfully</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            const newFiles = { ...uploadedFiles };
-                            delete newFiles[docType.id];
-                            setUploadedFiles(newFiles);
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <X size={20} />
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition min-h-[140px]">
-                        <Upload className="text-gray-400 mb-2" size={32} />
-                        <p className="text-sm text-gray-600 mb-1 text-center">Click to upload or drag and drop</p>
-                        <p className="text-xs text-gray-400 text-center">PDF, JPG, PNG (Max 10MB)</p>
-                        <input
-                          type="file"
-                          className="hidden"
-                          onChange={(e) => e.target.files && handleFileUpload(docType.id, e.target.files)}
-                          accept=".pdf,.jpg,.jpeg,.png"
-                        />
-                      </label>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
+              
               {!selectedExam && (
                 <div className="text-center py-8 text-gray-500">
                   <p>No exam selected</p>

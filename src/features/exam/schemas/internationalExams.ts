@@ -1,6 +1,11 @@
 import { ExamSchema } from '@/features/exam/examSchema';
 
-export const staticSchemas: Record<string, ExamSchema> = {
+/**
+ * International Exams Schemas - Lazy Loaded Module
+ * Language proficiency and international standardized tests
+ */
+
+export const internationalExams: Record<string, ExamSchema> = {
   'ielts': {
     examId: 'ielts',
     examName: 'IELTS',
@@ -110,9 +115,10 @@ export const staticSchemas: Record<string, ExamSchema> = {
       subjectiveRequirements: 2
     }
   },
-  'ssc': {
-    examId: 'ssc',
-    examName: 'Staff Selection Commission',
+
+  'toefl': {
+    examId: 'toefl',
+    examName: 'TOEFL iBT',
     version: '2024.1.0',
     lastUpdated: new Date('2024-01-15'),
     requirements: [
@@ -120,20 +126,20 @@ export const staticSchemas: Record<string, ExamSchema> = {
         id: 'photo',
         type: 'Photo',
         displayName: 'Recent Photograph',
-        description: 'Recent passport size photograph',
+        description: 'Recent passport-style color photograph',
         format: 'JPEG',
         maxSizeKB: 100,
         dimensions: '200x200',
-        aliases: ['passport photo', 'photograph', 'photo'],
+        aliases: ['passport photo', 'photograph'],
         category: 'photo',
         mandatory: true,
         subjective: [
           {
             field: 'photo',
-            requirement: 'Recent passport size photograph',
-            context: 'For identification during exam',
+            requirement: 'Recent color photograph with neutral background',
+            context: 'For ETS test center identification',
             confidence: 0.9,
-            source: 'form',
+            source: 'ets_guidelines',
             priority: 'high'
           }
         ],
@@ -141,33 +147,32 @@ export const staticSchemas: Record<string, ExamSchema> = {
           {
             type: 'strict',
             rule: 'file_size_limit',
-            message: 'Photo file size must not exceed 100KB',
+            message: 'Photo file size must be between 10KB to 100KB',
             field: 'photo',
             canOverride: false
           }
         ],
-        examples: ['Clear passport photo with white background'],
-        commonMistakes: ['Selfies', 'Blurry photos'],
-        helpText: 'Upload a recent passport size photo'
+        examples: ['Professional passport photo for international test'],
+        commonMistakes: ['Inappropriate clothing', 'Poor image quality'],
+        helpText: 'Upload a professional photograph suitable for international testing'
       },
       {
-        id: 'signature',
-        type: 'Signature',
-        displayName: 'Digital Signature',
-        description: 'Scanned signature image',
-        format: 'JPEG',
-        maxSizeKB: 50,
-        dimensions: '300x80',
-        aliases: ['signature', 'sign'],
-        category: 'signature',
+        id: 'id_document',
+        type: 'ID',
+        displayName: 'Valid ID Document',
+        description: 'Government-issued photo identification',
+        format: 'PDF',
+        maxSizeKB: 2048,
+        category: 'identity',
         mandatory: true,
+        aliases: ['passport', 'government id', 'identity'],
         subjective: [
           {
-            field: 'signature',
-            requirement: 'Clear signature in black ink',
-            context: 'For verification purposes',
-            confidence: 0.9,
-            source: 'guidelines',
+            field: 'id_document',
+            requirement: 'Valid passport or government-issued photo ID',
+            context: 'Must be valid on test date',
+            confidence: 0.95,
+            source: 'ets_guidelines',
             priority: 'high'
           }
         ],
@@ -175,147 +180,112 @@ export const staticSchemas: Record<string, ExamSchema> = {
           {
             type: 'strict',
             rule: 'file_size_limit',
-            message: 'Signature file size must not exceed 50KB',
-            field: 'signature',
+            message: 'ID document file size must not exceed 2MB',
+            field: 'id_document',
             canOverride: false
           }
         ],
-        examples: ['Clear black ink signature'],
-        commonMistakes: ['Pencil signature', 'Blurry scan'],
-        helpText: 'Upload a clear scanned signature in black ink'
+        examples: ['Valid passport', 'National ID card with photo'],
+        commonMistakes: ['Expired documents', 'Student ID cards'],
+        helpText: 'Upload a valid government-issued photo identification'
       }
     ],
     generalGuidelines: [
-      'Ensure all documents are clear and legible',
-      'Follow the size and format specifications',
-      'Keep original documents for verification'
+      'ID must be valid on test date',
+      'Photo must match ID document appearance',
+      'All documents must be clearly legible'
     ],
     scrapingMetadata: {
-      sources: ['form', 'guidelines'],
-      confidence: 0.85,
-      lastScrapeAttempt: new Date('2024-01-15'),
-      scrapeSuccess: true,
-      errorCount: 0
-    },
-    configuration: {
-      examType: 'SSC',
-      baseUrl: 'https://ssc.nic.in',
-      formUrls: ['https://ssc.nic.in/apply'],
-      faqUrls: ['https://ssc.nic.in/faq'],
-      guidelineUrls: ['https://ssc.nic.in/guidelines'],
-      updateFrequency: 'monthly',
-      priority: 2
-    },
-    stats: {
-      totalDocuments: 2,
-      mandatoryDocuments: 2,
-      avgConfidenceScore: 0.9,
-      subjectiveRequirements: 2
-    }
-  },
-  
-  // Example: Adding a new exam
-  'cat': {
-    examId: 'cat',
-    examName: 'Common Admission Test',
-    version: '2024.1.0',
-    lastUpdated: new Date('2024-01-15'),
-    requirements: [
-      {
-        id: 'photo',
-        type: 'Photo',
-        displayName: 'Recent Photograph',
-        description: 'Recent passport size photograph',
-        format: 'JPEG',
-        maxSizeKB: 100,
-        dimensions: '200x200',
-        aliases: ['passport photo', 'photograph', 'photo'],
-        category: 'photo',
-        mandatory: true,
-        subjective: [
-          {
-            field: 'photo',
-            requirement: 'Recent photograph with white background',
-            context: 'For identification during exam',
-            confidence: 0.9,
-            source: 'form',
-            priority: 'high'
-          }
-        ],
-        validationRules: [
-          {
-            type: 'strict',
-            rule: 'file_size_limit',
-            message: 'Photo file size must not exceed 100KB',
-            field: 'photo',
-            canOverride: false
-          }
-        ],
-        examples: ['Clear passport photo with white background'],
-        commonMistakes: ['Selfies', 'Blurry photos'],
-        helpText: 'Upload a recent passport-style photo'
-      },
-      {
-        id: 'signature',
-        type: 'Signature',
-        displayName: 'Digital Signature',
-        description: 'Scanned signature',
-        format: 'JPEG',
-        maxSizeKB: 50,
-        dimensions: '140x60',
-        aliases: ['sign', 'signature'],
-        category: 'signature',
-        mandatory: true,
-        subjective: [
-          {
-            field: 'signature',
-            requirement: 'Clear handwritten signature',
-            context: 'Must match signature on documents',
-            confidence: 0.85,
-            source: 'form',
-            priority: 'high'
-          }
-        ],
-        validationRules: [
-          {
-            type: 'strict',
-            rule: 'file_size_limit',
-            message: 'Signature file size must not exceed 50KB',
-            field: 'signature',
-            canOverride: false
-          }
-        ],
-        examples: ['Clear handwritten signature on white paper'],
-        commonMistakes: ['Printed signature', 'Unclear scan'],
-        helpText: 'Scan your handwritten signature clearly'
-      }
-    ],
-    generalGuidelines: [
-      'All documents must be clear and legible',
-      'Follow the specified format requirements',
-      'Ensure signature matches your ID documents'
-    ],
-    scrapingMetadata: {
-      sources: ['form', 'guidelines'],
+      sources: ['ets_website', 'toefl_portal'],
       confidence: 0.9,
       lastScrapeAttempt: new Date('2024-01-15'),
       scrapeSuccess: true,
       errorCount: 0
     },
     configuration: {
-      examType: 'CAT',
-      baseUrl: 'https://iimcat.ac.in',
-      formUrls: ['https://iimcat.ac.in/application'],
-      faqUrls: ['https://iimcat.ac.in/faqs'],
-      guidelineUrls: ['https://iimcat.ac.in/guidelines'],
-      updateFrequency: 'yearly',
-      priority: 2
+      examType: 'TOEFL',
+      baseUrl: 'https://ets.org/toefl',
+      formUrls: ['https://ets.org/toefl/register'],
+      faqUrls: ['https://ets.org/toefl/faqs'],
+      guidelineUrls: ['https://ets.org/toefl/guidelines'],
+      updateFrequency: 'quarterly',
+      priority: 1
     },
     stats: {
       totalDocuments: 2,
       mandatoryDocuments: 2,
-      avgConfidenceScore: 0.87,
+      avgConfidenceScore: 0.92,
       subjectiveRequirements: 2
+    }
+  },
+
+  'gre': {
+    examId: 'gre',
+    examName: 'GRE General Test',
+    version: '2024.1.0',
+    lastUpdated: new Date('2024-01-15'),
+    requirements: [
+      {
+        id: 'photo',
+        type: 'Photo',
+        displayName: 'Recent Photograph',
+        description: 'Recent passport-style photograph',
+        format: 'JPEG',
+        maxSizeKB: 100,
+        dimensions: '200x200',
+        aliases: ['passport photo', 'photograph'],
+        category: 'photo',
+        mandatory: true,
+        subjective: [
+          {
+            field: 'photo',
+            requirement: 'Recent color photograph matching ID appearance',
+            context: 'For graduate school test identification',
+            confidence: 0.9,
+            source: 'ets_guidelines',
+            priority: 'high'
+          }
+        ],
+        validationRules: [
+          {
+            type: 'strict',
+            rule: 'file_size_limit',
+            message: 'Photo file size must be between 10KB to 100KB',
+            field: 'photo',
+            canOverride: false
+          }
+        ],
+        examples: ['Academic professional photograph'],
+        commonMistakes: ['Casual appearance', 'Mismatched ID photo'],
+        helpText: 'Upload a professional photograph matching your ID document'
+      }
+    ],
+    generalGuidelines: [
+      'Photo must match ID document appearance',
+      'Maintain professional academic appearance',
+      'Ensure high image quality'
+    ],
+    scrapingMetadata: {
+      sources: ['ets_website', 'gre_portal'],
+      confidence: 0.88,
+      lastScrapeAttempt: new Date('2024-01-15'),
+      scrapeSuccess: true,
+      errorCount: 0
+    },
+    configuration: {
+      examType: 'GRE',
+      baseUrl: 'https://ets.org/gre',
+      formUrls: ['https://ets.org/gre/register'],
+      faqUrls: ['https://ets.org/gre/faqs'],
+      guidelineUrls: ['https://ets.org/gre/guidelines'],
+      updateFrequency: 'quarterly',
+      priority: 2
+    },
+    stats: {
+      totalDocuments: 1,
+      mandatoryDocuments: 1,
+      avgConfidenceScore: 0.88,
+      subjectiveRequirements: 1
     }
   }
 };

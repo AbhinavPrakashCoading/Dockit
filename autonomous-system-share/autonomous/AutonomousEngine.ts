@@ -980,6 +980,554 @@ export class AutonomousEngine {
   }
 
   /**
+   * 🚀 SCALABLE DISCOVERY SYSTEM - Main entry point for intelligent schema discovery
+   * Handles discovery for thousands of exams through layered fallback strategy
+   */
+  async discoverSchemaIntelligently(query: string, options: {
+    examName?: string;
+    category?: string;
+    urgency?: 'low' | 'medium' | 'high' | 'critical';
+    fallbackToCache?: boolean;
+  } = {}): Promise<{
+    examId: string;
+    examName: string;
+    confidence: number;
+    source: {
+      primary: string;
+      type: 'cached' | 'scraped' | 'inferred' | 'search';
+      reliability: number;
+      timestamp: string;
+    };
+    schema: {
+      requirements: Array<{
+        id: string;
+        name: string;
+        type: 'document' | 'text' | 'selection';
+        required: boolean;
+        description: string;
+      }>;
+      metadata: {
+        totalFields: number;
+        documentFields: number;
+        lastUpdated: string;
+        verificationStatus: 'verified' | 'predicted' | 'experimental';
+      };
+    };
+    discoveryPath: string[];
+    processingTime: number;
+  }> {
+    const startTime = Date.now();
+    const discoveryPath: string[] = [];
+    
+    console.log(`🚀 Starting scalable discovery for: "${query}"`);
+
+    try {
+      // Layer 1: Check Knowledge Base & Cache
+      console.log('🔍 Layer 1: Checking knowledge base and cache...');
+      const cachedResult = await this.checkKnowledgeBaseAdvanced(query);
+      if (cachedResult && cachedResult.confidence > 0.85) {
+        discoveryPath.push('knowledge-base');
+        console.log(`✅ Found high-confidence cached result: ${cachedResult.examName}`);
+        return {
+          ...cachedResult,
+          discoveryPath,
+          processingTime: Date.now() - startTime
+        };
+      }
+
+      // Layer 2: Intelligent Web Search + Visual Scraping
+      console.log('🌐 Layer 2: Performing intelligent web search and scraping...');
+      const scrapedResult = await this.performAdvancedWebScraping(query, options);
+      if (scrapedResult && scrapedResult.confidence > 0.75) {
+        discoveryPath.push('web-scraping');
+        
+        // Learn from successful scraping for future optimization
+        await this.learningSystem.processUserFeedback(query, {
+          wasHelpful: true,
+          rating: 4,
+          suggestions: [`Successfully discovered ${scrapedResult.examName} via web scraping`],
+          timestamp: new Date()
+        } as UserFeedback);
+        
+        console.log(`✅ Successfully scraped: ${scrapedResult.examName}`);
+        return {
+          ...scrapedResult,
+          discoveryPath,
+          processingTime: Date.now() - startTime
+        };
+      }
+
+      // Layer 3: ML-Powered Inference from Similar Exams
+      console.log('🧠 Layer 3: Performing ML-powered inference...');
+      const inferredResult = await this.performMLInferenceAdvanced(query, options);
+      if (inferredResult && inferredResult.confidence > 0.65) {
+        discoveryPath.push('ml-inference');
+        console.log(`✅ Generated ML inference: ${inferredResult.examName}`);
+        return {
+          ...inferredResult,
+          discoveryPath,
+          processingTime: Date.now() - startTime
+        };
+      }
+
+      // Layer 4: Adaptive Fallback with Learning
+      console.log('🔧 Layer 4: Generating adaptive fallback schema...');
+      const fallbackResult = await this.generateAdaptiveFallback(query, options);
+      discoveryPath.push('adaptive-fallback');
+      
+      // Queue for future improvement via background learning
+      this.queueForBackgroundLearning(query, fallbackResult);
+      
+      console.log(`✅ Generated adaptive fallback: ${fallbackResult.examName}`);
+      return {
+        ...fallbackResult,
+        discoveryPath,
+        processingTime: Date.now() - startTime
+      };
+
+    } catch (error) {
+      console.error('🚨 All discovery layers failed:', error);
+      
+      // Emergency fallback - always returns something usable
+      return this.generateEmergencyFallback(query, options, discoveryPath, startTime);
+    }
+  }
+
+  /**
+   * Layer 1: Advanced Knowledge Base Search
+   */
+  private async checkKnowledgeBaseAdvanced(query: string): Promise<any | null> {
+    try {
+      // Check schema discovery engine's knowledge base
+      const discoveredSchemas = await this.schemaEngine.discoverRelevantSchemas(query, {
+        includeMetadata: true,
+        maxResults: 5,
+        minConfidence: 0.8
+      });
+
+      if (discoveredSchemas.length > 0) {
+        const bestMatch = discoveredSchemas[0];
+        return {
+          examId: bestMatch.examId,
+          examName: bestMatch.examName,
+          confidence: bestMatch.confidence,
+          source: {
+            primary: bestMatch.sources[0]?.url || 'knowledge-base',
+            type: 'cached' as const,
+            reliability: bestMatch.sources[0]?.reliability || 0.9,
+            timestamp: new Date().toISOString()
+          },
+          schema: {
+            requirements: bestMatch.requirements.map(req => ({
+              id: req.fieldId,
+              name: req.displayName,
+              type: req.fieldType,
+              required: req.isRequired,
+              description: req.description || `${req.displayName} field`
+            })),
+            metadata: {
+              totalFields: bestMatch.requirements.length,
+              documentFields: bestMatch.requirements.filter(r => r.fieldType === 'document').length,
+              lastUpdated: bestMatch.lastUpdated.toISOString(),
+              verificationStatus: 'verified' as const
+            }
+          }
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('Knowledge base search failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Layer 2: Advanced Web Scraping with Multiple Strategies
+   */
+  private async performAdvancedWebScraping(query: string, options: any): Promise<any | null> {
+    try {
+      // Use web scraper to find and analyze exam websites
+      const discoveryResults = await this.webScraper.discoverFormUrls(query, {
+        maxUrls: 5,
+        includeRelatedForms: true,
+        followRedirects: true
+      });
+
+      if (discoveryResults.length === 0) {
+        return null;
+      }
+
+      // Scrape multiple sources in parallel for reliability
+      const scrapingPromises = discoveryResults.slice(0, 3).map(async (result) => {
+        try {
+          const scrapedData = await this.webScraper.scrapeFormStructure(result.url, {
+            extractDocumentFields: true,
+            includeFieldDescriptions: true,
+            detectRequiredFields: true
+          });
+          
+          return { ...scrapedData, sourceUrl: result.url, confidence: result.confidence };
+        } catch (error) {
+          console.warn(`Failed to scrape ${result.url}:`, error);
+          return null;
+        }
+      });
+
+      const scrapedResults = (await Promise.allSettled(scrapingPromises))
+        .filter(result => result.status === 'fulfilled')
+        .map(result => (result as PromiseFulfilledResult<any>).value)
+        .filter(data => data !== null);
+
+      if (scrapedResults.length === 0) {
+        return null;
+      }
+
+      // Select best scraped result based on confidence and completeness
+      const bestResult = scrapedResults.reduce((best, current) => {
+        const currentScore = current.confidence + (current.fields.length * 0.1);
+        const bestScore = best.confidence + (best.fields.length * 0.1);
+        return currentScore > bestScore ? current : best;
+      });
+
+      // Convert to standardized format
+      return {
+        examId: this.generateExamId(bestResult.title || query),
+        examName: bestResult.title || this.extractExamName(query),
+        confidence: Math.min(bestResult.confidence + 0.1, 0.95), // Boost for successful scraping
+        source: {
+          primary: bestResult.sourceUrl,
+          type: 'scraped' as const,
+          reliability: bestResult.confidence,
+          timestamp: new Date().toISOString()
+        },
+        schema: {
+          requirements: bestResult.fields.map((field: any) => ({
+            id: field.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            name: field.label || field.name,
+            type: this.detectFieldType(field),
+            required: field.required || false,
+            description: field.description || `${field.label || field.name} field`
+          })),
+          metadata: {
+            totalFields: bestResult.fields.length,
+            documentFields: bestResult.fields.filter((f: any) => this.isDocumentField(f)).length,
+            lastUpdated: new Date().toISOString(),
+            verificationStatus: 'verified' as const
+          }
+        }
+      };
+
+    } catch (error) {
+      console.warn('Advanced web scraping failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Layer 3: ML-Powered Inference
+   */
+  private async performMLInferenceAdvanced(query: string, options: any): Promise<any | null> {
+    try {
+      // Use predictive engine to find similar exams and infer schema
+      const predictions = await this.predictiveEngine.generateIntelligentPredictions({
+        examQuery: query,
+        examCategory: options.category,
+        userPreferences: {},
+        historicalData: []
+      });
+
+      if (predictions.length === 0) {
+        return null;
+      }
+
+      // Get similar exams from schema discovery engine
+      const similarSchemas = await this.schemaEngine.discoverRelevantSchemas(query, {
+        includeMetadata: true,
+        maxResults: 10,
+        minConfidence: 0.5
+      });
+
+      if (similarSchemas.length === 0) {
+        return null;
+      }
+
+      // Generate inferred schema based on patterns in similar exams
+      const inferredRequirements = this.inferRequirementsFromSimilar(query, similarSchemas);
+      
+      return {
+        examId: this.generateExamId(options.examName || query),
+        examName: options.examName || this.extractExamName(query),
+        confidence: 0.7, // Medium confidence for ML inference
+        source: {
+          primary: 'ml-inference',
+          type: 'inferred' as const,
+          reliability: 0.7,
+          timestamp: new Date().toISOString()
+        },
+        schema: {
+          requirements: inferredRequirements,
+          metadata: {
+            totalFields: inferredRequirements.length,
+            documentFields: inferredRequirements.filter(r => r.type === 'document').length,
+            lastUpdated: new Date().toISOString(),
+            verificationStatus: 'predicted' as const
+          }
+        }
+      };
+
+    } catch (error) {
+      console.warn('ML inference failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Layer 4: Adaptive Fallback Generation
+   */
+  private async generateAdaptiveFallback(query: string, options: any): Promise<any> {
+    const examInfo = this.parseExamInformation(query);
+    const categoryRequirements = this.getCategorySpecificRequirements(examInfo.category);
+    
+    return {
+      examId: this.generateExamId(options.examName || examInfo.name),
+      examName: options.examName || examInfo.name,
+      confidence: 0.6, // Lower confidence for fallback
+      source: {
+        primary: 'adaptive-generation',
+        type: 'inferred' as const,
+        reliability: 0.6,
+        timestamp: new Date().toISOString()
+      },
+      schema: {
+        requirements: categoryRequirements,
+        metadata: {
+          totalFields: categoryRequirements.length,
+          documentFields: categoryRequirements.filter(r => r.type === 'document').length,
+          lastUpdated: new Date().toISOString(),
+          verificationStatus: 'experimental' as const
+        }
+      }
+    };
+  }
+
+  /**
+   * Emergency fallback - always returns something usable
+   */
+  private generateEmergencyFallback(query: string, options: any, discoveryPath: string[], startTime: number): any {
+    console.log('🚨 Emergency fallback activated');
+    
+    const basicRequirements = [
+      {
+        id: 'photo',
+        name: 'Passport Photo',
+        type: 'document' as const,
+        required: true,
+        description: 'Recent passport-sized photograph'
+      },
+      {
+        id: 'signature',
+        name: 'Signature',
+        type: 'document' as const,
+        required: true,
+        description: 'Candidate signature'
+      }
+    ];
+
+    return {
+      examId: 'emergency-' + Date.now(),
+      examName: options.examName || 'Unknown Exam',
+      confidence: 0.3,
+      source: {
+        primary: 'emergency-fallback',
+        type: 'inferred' as const,
+        reliability: 0.3,
+        timestamp: new Date().toISOString()
+      },
+      schema: {
+        requirements: basicRequirements,
+        metadata: {
+          totalFields: basicRequirements.length,
+          documentFields: basicRequirements.length,
+          lastUpdated: new Date().toISOString(),
+          verificationStatus: 'experimental' as const
+        }
+      },
+      discoveryPath: [...discoveryPath, 'emergency-fallback'],
+      processingTime: Date.now() - startTime
+    };
+  }
+
+  /**
+   * Helper Methods for Scalable Discovery
+   */
+  private parseExamInformation(query: string): { name: string; category: string; type: string } {
+    const lowercaseQuery = query.toLowerCase();
+    
+    let category = 'general';
+    if (lowercaseQuery.includes('bank') || lowercaseQuery.includes('ibps') || lowercaseQuery.includes('sbi')) {
+      category = 'banking';
+    } else if (lowercaseQuery.includes('ssc') || lowercaseQuery.includes('upsc') || lowercaseQuery.includes('government')) {
+      category = 'government';
+    } else if (lowercaseQuery.includes('jee') || lowercaseQuery.includes('neet') || lowercaseQuery.includes('engineering')) {
+      category = 'engineering';
+    } else if (lowercaseQuery.includes('cat') || lowercaseQuery.includes('mba') || lowercaseQuery.includes('management')) {
+      category = 'management';
+    }
+
+    const name = query.replace(/\b(application|form|requirements?|documents?)\b/gi, '').trim();
+    
+    return { name, category, type: 'competitive' };
+  }
+
+  private getCategorySpecificRequirements(category: string) {
+    const baseRequirements = [
+      {
+        id: 'photo',
+        name: 'Passport Photo',
+        type: 'document' as const,
+        required: true,
+        description: 'Recent passport-sized photograph'
+      },
+      {
+        id: 'signature',
+        name: 'Signature',
+        type: 'document' as const,
+        required: true,
+        description: 'Candidate signature'
+      }
+    ];
+
+    if (category === 'banking') {
+      baseRequirements.push(
+        {
+          id: 'left-thumb-impression',
+          name: 'Left Thumb Impression',
+          type: 'document' as const,
+          required: true,
+          description: 'Clear left thumb impression'
+        },
+        {
+          id: 'handwritten-declaration',
+          name: 'Handwritten Declaration',
+          type: 'document' as const,
+          required: true,
+          description: 'Handwritten declaration in candidate\'s handwriting'
+        },
+        {
+          id: 'educational-certificate',
+          name: 'Educational Certificate',
+          type: 'document' as const,
+          required: true,
+          description: '10th class mark sheet or equivalent educational certificate'
+        }
+      );
+    } else if (category === 'government') {
+      baseRequirements.push({
+        id: 'category-certificate',
+        name: 'Category Certificate',
+        type: 'document' as const,
+        required: false,
+        description: 'Caste/category certificate if applicable'
+      });
+    }
+
+    return baseRequirements;
+  }
+
+  private inferRequirementsFromSimilar(query: string, similarSchemas: any[]): any[] {
+    // Analyze patterns in similar schemas to infer requirements
+    const fieldFrequency = new Map<string, number>();
+    const fieldDetails = new Map<string, any>();
+
+    similarSchemas.forEach(schema => {
+      schema.requirements.forEach((req: any) => {
+        const fieldKey = req.fieldId;
+        fieldFrequency.set(fieldKey, (fieldFrequency.get(fieldKey) || 0) + 1);
+        
+        if (!fieldDetails.has(fieldKey)) {
+          fieldDetails.set(fieldKey, {
+            id: fieldKey,
+            name: req.displayName,
+            type: req.fieldType,
+            required: req.isRequired,
+            description: req.description || `${req.displayName} field`
+          });
+        }
+      });
+    });
+
+    // Include fields that appear in at least 30% of similar schemas
+    const threshold = Math.max(1, Math.floor(similarSchemas.length * 0.3));
+    const inferredRequirements: any[] = [];
+
+    for (const [fieldKey, frequency] of fieldFrequency.entries()) {
+      if (frequency >= threshold) {
+        inferredRequirements.push(fieldDetails.get(fieldKey));
+      }
+    }
+
+    // Ensure minimum requirements
+    if (inferredRequirements.length < 2) {
+      const examInfo = this.parseExamInformation(query);
+      return this.getCategorySpecificRequirements(examInfo.category);
+    }
+
+    return inferredRequirements;
+  }
+
+  private extractExamName(query: string): string {
+    return query
+      .replace(/\b(application|form|requirements?|documents?|exam|examination)\b/gi, '')
+      .trim() || 'Unknown Exam';
+  }
+
+  private generateExamId(examName: string): string {
+    return examName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'unknown-exam';
+  }
+
+  private detectFieldType(field: any): 'document' | 'text' | 'selection' {
+    const fieldName = (field.name || field.label || '').toLowerCase();
+    
+    if (fieldName.includes('photo') || fieldName.includes('image') || 
+        fieldName.includes('signature') || fieldName.includes('certificate') ||
+        fieldName.includes('document') || fieldName.includes('upload')) {
+      return 'document';
+    }
+    
+    if (field.type === 'select' || field.type === 'radio' || field.type === 'checkbox') {
+      return 'selection';
+    }
+    
+    return 'text';
+  }
+
+  private isDocumentField(field: any): boolean {
+    return this.detectFieldType(field) === 'document';
+  }
+
+  private queueForBackgroundLearning(query: string, result: any): void {
+    // Queue this discovery for background learning to improve future results
+    setTimeout(async () => {
+      try {
+        await this.learningSystem.learnFromUserInteraction({
+          userId: 'system',
+          examId: result.examId,
+          interactionType: 'schema_generation',
+          timestamp: new Date(),
+          context: { query, discoveryMethod: 'adaptive-fallback' }
+        });
+      } catch (error) {
+        console.warn('Background learning failed:', error);
+      }
+    }, 1000);
+  }
+
+  /**
    * Get current configuration
    */
   getConfiguration(): AutonomousConfiguration {

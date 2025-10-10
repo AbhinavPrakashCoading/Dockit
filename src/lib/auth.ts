@@ -72,14 +72,21 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   session: {
-    strategy: process.env.DATABASE_URL ? 'database' : 'jwt',
+    strategy: 'jwt', // Always use JWT strategy for credentials provider compatibility
   },
   callbacks: {
+    async jwt({ token, user, account }) {
+      // Persist the OAuth account info or user data to the token when signing in
+      if (account && user) {
+        token.id = user.id
+      }
+      return token
+    },
     async session({ session, user, token }) {
       if (user && session.user) {
         (session.user as any).id = user.id
       } else if (token && session.user) {
-        (session.user as any).id = token.sub
+        (session.user as any).id = token.sub || token.id
       }
       return session
     },

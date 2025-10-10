@@ -1,0 +1,27 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- CAT Logo Design -->
+  <defs>
+    <linearGradient id="catGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9C27B0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#673AB7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Circle -->
+  <circle cx="32" cy="32" r="30" fill="#FFF" stroke="#9C27B0" stroke-width="2"/>
+  
+  <!-- Chart/Graph Symbol -->
+  <g transform="translate(32, 32)">
+    <!-- Bar chart -->
+    <rect x="-18" y="8" width="6" height="10" fill="url(#catGradient)" rx="1"/>
+    <rect x="-8" y="2" width="6" height="16" fill="url(#catGradient)" rx="1"/>
+    <rect x="2" y="-4" width="6" height="22" fill="url(#catGradient)" rx="1"/>
+    <rect x="12" y="-10" width="6" height="28" fill="url(#catGradient)" rx="1"/>
+    
+    <!-- Trending arrow -->
+    <path d="M-15,-15 L-5,-15 L-5,-10 L0,-15 L-5,-20 L-5,-15" fill="#FFF" opacity="0.8"/>
+  </g>
+  
+  <!-- CAT Text -->
+  <text x="32" y="52" font-family="Arial, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#9C27B0">CAT</text>
+</svg>
