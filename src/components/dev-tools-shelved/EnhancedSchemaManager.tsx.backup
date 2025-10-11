@@ -1,0 +1,369 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Database, Search, Eye, Settings, Zap, BarChart3, CheckCircle, RefreshCw, FileText, Edit3, Trash2, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+interface Schema {
+  examId: string;
+  examName: string;
+  version: string;
+  lastUpdated: string;
+  requirementsCount: number;
+  size: number;
+}
+
+interface SchemaStats {
+  totalSchemas: number;
+  totalRequirements: number;
+  averageRequirements: number;
+  totalSize: number;
+  lastUpdated: number | null;
+}
+
+export const EnhancedSchemaManager: React.FC = () => {
+  const [schemas, setSchemas] = useState<Schema[]>([]);
+  const [stats, setStats] = useState<SchemaStats | null>(null);
+  const [selectedSchema, setSelectedSchema] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'overview' | 'manage' | 'enhance' | 'discover' | 'analytics'>('overview');
+
+  useEffect(() => {
+    loadSchemas();
+    loadStats();
+  }, []);
+
+  const loadSchemas = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/schema-management?action=list');
+      const data = await response.json();
+      
+      if (data.success) {
+        const validSchemas = (data.data?.schemas || []).filter((schema: any) => 
+          schema && typeof schema === 'object' && schema.examId
+        );
+        setSchemas(validSchemas);
+      } else {
+        toast.error('Failed to load schemas');
+        setSchemas([]);
+      }
+    } catch (error) {
+      console.error('Error loading schemas:', error);
+      toast.error('Error loading schemas');
+      setSchemas([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await fetch('/api/schema-management?action=stats');
+      const data = await response.json();
+      
+      if (data.success) {
+        setStats(data.data.stats);
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const filteredSchemas = (schemas || []).filter(schema => {
+    if (!schema || typeof schema !== 'object') return false;
+    const examName = schema.examName || '';
+    const examId = schema.examId || '';
+    const searchLower = (searchTerm || '').toLowerCase();
+    return examName.toLowerCase().includes(searchLower) || 
+           examId.toLowerCase().includes(searchLower);
+  });
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        
+        {/* Beautiful Header */}
+        <div className="relative overflow-hidden bg-white rounded-2xl shadow-xl border border-white/20 backdrop-blur-sm">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-indigo-600/5"></div>
+          <div className="relative p-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="relative">
+                  <div className="w-16 h-16 flex items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                    <Database className="text-white" size={28} />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+                </div>
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                    Enhanced Schema Manager
+                  </h1>
+                  <p className="text-lg text-gray-600 mt-1">Comprehensive exam schema management and enhancement tool</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={loadSchemas}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                >
+                  <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Beautiful Stats Cards */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="group relative overflow-hidden bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                    <FileText className="text-white" size={24} />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Total Schemas</span>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalSchemas}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="group relative overflow-hidden bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-green-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                    <BarChart3 className="text-white" size={24} />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Requirements</span>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalRequirements}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="group relative overflow-hidden bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-purple-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+                    <Settings className="text-white" size={24} />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Avg/Schema</span>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.averageRequirements}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="group relative overflow-hidden bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-orange-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+                    <Database className="text-white" size={24} />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Total Size</span>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{formatBytes(stats.totalSize)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Beautiful Navigation Tabs */}
+        <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100/50 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-white to-gray-50/30"></div>
+          <nav className="relative flex space-x-1 p-2">
+            {[
+              { id: 'overview', label: 'Overview', icon: Eye, gradient: 'from-blue-500 to-blue-600' },
+              { id: 'manage', label: 'Manage', icon: Settings, gradient: 'from-green-500 to-green-600' },
+              { id: 'enhance', label: 'Enhance', icon: Zap, gradient: 'from-yellow-500 to-orange-600' },
+              { id: 'discover', label: 'Discover', icon: Search, gradient: 'from-purple-500 to-purple-600' },
+              { id: 'analytics', label: 'Analytics', icon: BarChart3, gradient: 'from-indigo-500 to-indigo-600' }
+            ].map((tab) => {
+              const IconComponent = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`group relative flex items-center gap-3 py-3 px-6 text-sm font-medium rounded-xl transition-all duration-300 transform ${
+                    isActive
+                      ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg scale-105`
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 hover:scale-105'
+                  }`}
+                >
+                  <IconComponent size={18} className={isActive ? 'animate-pulse' : 'group-hover:scale-110 transition-transform duration-200'} />
+                  <span className="font-semibold">{tab.label}</span>
+                  {isActive && (
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-1 bg-white rounded-full opacity-80"></div>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Beautiful Content Area */}
+        <div className="relative">
+          {activeTab === 'overview' && (
+            <div className="space-y-8 animate-in fade-in-0 duration-500">
+              
+              {/* Beautiful Search */}
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search schemas by name or ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-6 py-4 text-lg border-2 border-gray-200 rounded-2xl bg-white/80 backdrop-blur-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300"
+                  />
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 pointer-events-none"></div>
+                </div>
+              </div>
+
+              {/* Beautiful Schema Grid */}
+              {isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="relative">
+                    <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Database className="text-blue-600" size={24} />
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Loading schemas...</h3>
+                    <p className="text-gray-600">Please wait while we fetch your data</p>
+                  </div>
+                </div>
+              ) : filteredSchemas.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="relative mx-auto mb-8 w-32 h-32 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full animate-pulse"></div>
+                    <FileText className="relative text-gray-400" size={48} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">No schemas found</h3>
+                  <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
+                    {searchTerm ? 'No schemas match your search criteria. Try a different search term.' : 'No schemas available. Create your first schema to get started with powerful document management.'}
+                  </p>
+                  {!searchTerm && (
+                    <button
+                      onClick={() => setActiveTab('discover')}
+                      className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    >
+                      <Search size={20} />
+                      <span className="font-semibold text-lg">Discover Schema</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredSchemas.map((schema, index) => (
+                    <div 
+                      key={schema.examId} 
+                      className="group relative overflow-hidden bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="absolute inset-[1px] bg-white rounded-2xl"></div>
+                      
+                      <div className="relative p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
+                              {schema.examName}
+                            </h3>
+                            <p className="text-sm text-gray-500 font-medium mt-1">{schema.examId}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 px-3 py-1 rounded-full font-semibold">
+                              v{schema.version}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3 mb-6">
+                          <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span className="text-sm font-medium text-gray-700">Requirements</span>
+                            <span className="text-lg font-bold text-blue-600">{schema.requirementsCount}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span className="text-sm font-medium text-gray-700">Size</span>
+                            <span className="text-lg font-bold text-green-600">{formatBytes(schema.size)}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span className="text-sm font-medium text-gray-700">Updated</span>
+                            <span className="text-sm font-semibold text-gray-900">{new Date(schema.lastUpdated).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => {
+                              setSelectedSchema(schema);
+                              setActiveTab('manage');
+                            }}
+                            className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-800 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                          >
+                            <Eye size={16} />
+                            View
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedSchema(schema);
+                              setActiveTab('manage');
+                            }}
+                            className="flex-1 px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 hover:border-gray-300 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105"
+                          >
+                            <Edit3 size={16} />
+                            Edit
+                          </button>
+                          <button
+                            className="px-4 py-3 bg-red-50 border-2 border-red-200 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 hover:border-red-300 flex items-center justify-center transition-all duration-300 transform hover:scale-105"
+                            title="Delete schema"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Other tab content can be added here */}
+          {activeTab !== 'overview' && (
+            <div className="text-center py-20">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Coming Soon</h3>
+              <p className="text-lg text-gray-600">This section is under development.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

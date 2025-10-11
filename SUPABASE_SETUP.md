@@ -1,6 +1,6 @@
 # 🗄️ Free Database Setup with Supabase
 
-This guide shows you how to set up **completely FREE** database persistence for your Document Manager app using Supabase.
+This guide shows you how to set up **completely FREE** database persistence for your Dockit app using Supabase.
 
 ## 🎯 What You Get (FREE)
 

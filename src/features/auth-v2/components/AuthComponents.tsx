@@ -49,8 +49,8 @@ export const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }
     <div className="auth-layout">
       <div className="auth-container">
         <div className="auth-brand">
-          <h1>Document Manager</h1>
-          <p>Secure document management platform</p>
+          <h1>Dockit</h1>
+          <p>Autonomous document intelligence platform</p>
         </div>
         <div className="auth-content">
           {children}

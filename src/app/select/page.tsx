@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import GuestMode from '@/components/GuestMode';
-import Dashboard from '@/components/Dashboard';
+import Dashboard from '@/components/dashboard/Dashboard';
 import toast from 'react-hot-toast';
 
 export default function SelectPage() {

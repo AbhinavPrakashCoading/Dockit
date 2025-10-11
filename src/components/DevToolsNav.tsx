@@ -12,6 +12,15 @@ import { Search, Bug, FileText, Zap, ArrowRight, Settings, Database } from 'luci
 export const DevToolsNav: React.FC = () => {
   const tools = [
     {
+      id: 'schema-extraction',
+      name: 'Schema Extraction Engine',
+      description: 'Autonomous exam schema generation from exam names',
+      href: '/dev-tools/schema-extraction',
+      icon: Zap,
+      color: 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white',
+      features: ['Auto web scraping', 'PDF content extraction', 'Pattern recognition', 'JSON schema builder']
+    },
+    {
       id: 'schema-management',
       name: 'Enhanced Schema Manager',
       description: 'Comprehensive schema CRUD operations and enhancements',
@@ -68,7 +77,7 @@ export const DevToolsNav: React.FC = () => {
             <Link key={tool.id} href={tool.href}>
               <div className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer border border-gray-200 hover:border-gray-300">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-12 h-12 ${tool.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <div className={`w-12 h-12 ${tool.color.includes('gradient') ? tool.color : `${tool.color}`} rounded-lg flex items-center justify-center flex-shrink-0`}>
                     <IconComponent size={24} />
                   </div>
                   <div className="flex-1">

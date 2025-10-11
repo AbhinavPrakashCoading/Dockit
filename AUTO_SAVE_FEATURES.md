@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-Successfully implemented a comprehensive auto-save and draft system for the Document Manager app that automatically preserves user progress without requiring explicit saves.
+Successfully implemented a comprehensive auto-save and draft system for the Dockit app that automatically preserves user progress without requiring explicit saves.
 
 ## 🏗️ Architecture
 
