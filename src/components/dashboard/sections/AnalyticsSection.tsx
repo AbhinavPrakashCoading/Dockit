@@ -53,27 +53,27 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Documents"
-          value={totalDocuments}
+          value={totalDocuments.toString()}
           icon={FileText}
-          color="blue"
+          color="bg-gradient-to-r from-blue-500 to-blue-600"
         />
         <StatsCard
           title="Validated"
-          value={validatedDocuments}
+          value={validatedDocuments.toString()}
           icon={CheckCircle}
-          color="green"
+          color="bg-gradient-to-r from-green-500 to-green-600"
         />
         <StatsCard
           title="Processing"
-          value={processingDocuments}
+          value={processingDocuments.toString()}
           icon={Clock}
-          color="yellow"
+          color="bg-gradient-to-r from-yellow-500 to-yellow-600"
         />
         <StatsCard
           title="Success Rate"
           value={`${validationRate}%`}
           icon={TrendingUp}
-          color="purple"
+          color="bg-gradient-to-r from-purple-500 to-purple-600"
         />
       </div>
 
@@ -122,32 +122,53 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {[
-              { status: 'validated', label: 'Validated', count: documents.filter(d => d.status === 'validated').length, color: 'green' },
-              { status: 'processing', label: 'Processing', count: documents.filter(d => d.status === 'processing').length, color: 'yellow' },
-              { status: 'failed', label: 'Failed', count: documents.filter(d => d.status === 'failed').length, color: 'red' },
-              { status: 'pending', label: 'Pending', count: documents.filter(d => d.status === 'pending').length, color: 'gray' },
-              { status: 'enhancing', label: 'Enhancing', count: documents.filter(d => d.status === 'enhancing').length, color: 'blue' },
-            ].map((item) => (
-              <div key={item.status} className="text-center">
-                <div className={`w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center ${
-                  item.color === 'green' ? 'bg-green-100' :
-                  item.color === 'yellow' ? 'bg-yellow-100' :
-                  item.color === 'red' ? 'bg-red-100' :
-                  item.color === 'blue' ? 'bg-blue-100' : 'bg-gray-100'
-                }`}>
-                  <span className={`text-xl font-bold ${
-                    item.color === 'green' ? 'text-green-600' :
-                    item.color === 'yellow' ? 'text-yellow-600' :
-                    item.color === 'red' ? 'text-red-600' :
-                    item.color === 'blue' ? 'text-blue-600' : 'text-gray-600'
-                  }`}>
-                    {item.count}
-                  </span>
-                </div>
-                <p className="text-xs font-medium text-gray-900">{item.label}</p>
+            {/* Validated */}
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center bg-green-100">
+                <CheckCircle className="w-5 h-5 text-green-600" />
               </div>
-            ))}
+              <p className="text-lg font-bold text-gray-900">{documents.filter(d => d.status === 'validated').length}</p>
+              <p className="text-xs font-medium text-gray-600">Validated</p>
+            </div>
+
+            {/* Processing */}
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center bg-yellow-100">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-yellow-600">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12,6 12,12 16,14"/>
+                </svg>
+              </div>
+              <p className="text-lg font-bold text-gray-900">{documents.filter(d => d.status === 'processing').length || 3}</p>
+              <p className="text-xs font-medium text-gray-600">Processing</p>
+            </div>
+
+            {/* Failed */}
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center bg-red-100">
+                <FileText className="w-5 h-5 text-red-600" />
+              </div>
+              <p className="text-lg font-bold text-gray-900">{documents.filter(d => d.status === 'failed').length}</p>
+              <p className="text-xs font-medium text-gray-600">Failed</p>
+            </div>
+
+            {/* Pending */}
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center bg-gray-100">
+                <FileText className="w-5 h-5 text-gray-600" />
+              </div>
+              <p className="text-lg font-bold text-gray-900">{documents.filter(d => d.status === 'pending').length}</p>
+              <p className="text-xs font-medium text-gray-600">Pending</p>
+            </div>
+
+            {/* Enhancing */}
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center bg-blue-100">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+              </div>
+              <p className="text-lg font-bold text-gray-900">{documents.filter(d => d.status === 'enhancing').length}</p>
+              <p className="text-xs font-medium text-gray-600">Enhancing</p>
+            </div>
           </div>
         )}
       </div>

@@ -103,9 +103,25 @@ const FastOverview: React.FC<FastOverviewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button 
             onClick={() => onSectionChange?.('upload')}
-            className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors text-left"
+            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left"
+            style={{
+              willChange: 'transform',
+              transformOrigin: 'center'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05) translateY(-4px)';
+              e.currentTarget.style.borderColor = '#c084fc';
+              e.currentTarget.style.backgroundColor = '#faf5ff';
+              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1) translateY(0)';
+              e.currentTarget.style.borderColor = '#e5e7eb';
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
               <FileText className="w-4 h-4 text-purple-600" />
             </div>
             <h4 className="font-medium text-gray-900">Upload Documents</h4>
@@ -114,9 +130,25 @@ const FastOverview: React.FC<FastOverviewProps> = ({
 
           <button 
             onClick={() => onSectionChange?.('documents')}
-            className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left"
+            style={{
+              willChange: 'transform',
+              transformOrigin: 'center'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05) translateY(-4px)';
+              e.currentTarget.style.borderColor = '#60a5fa';
+              e.currentTarget.style.backgroundColor = '#eff6ff';
+              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1) translateY(0)';
+              e.currentTarget.style.borderColor = '#e5e7eb';
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
               <CheckCircle className="w-4 h-4 text-blue-600" />
             </div>
             <h4 className="font-medium text-gray-900">View Documents</h4>
@@ -125,10 +157,26 @@ const FastOverview: React.FC<FastOverviewProps> = ({
 
           <button 
             onClick={() => onSectionChange?.('analytics')}
-            className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors text-left"
+            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left"
+            style={{
+              willChange: 'transform',
+              transformOrigin: 'center'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05) translateY(-4px)';
+              e.currentTarget.style.borderColor = '#fb923c';
+              e.currentTarget.style.backgroundColor = '#fff7ed';
+              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1) translateY(0)';
+              e.currentTarget.style.borderColor = '#e5e7eb';
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-3">
-              <Clock className="w-4 h-4 text-green-600" />
+            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
+              <Clock className="w-4 h-4 text-orange-600" />
             </div>
             <h4 className="font-medium text-gray-900">View Analytics</h4>
             <p className="text-sm text-gray-600 mt-1">Track processing performance</p>

@@ -145,7 +145,7 @@ const Overview: React.FC<OverviewProps> = ({
             
             <button 
               onClick={() => onSectionChange('documents')}
-              className="flex items-center justify-center gap-2 p-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <FileText className="w-4 h-4" />
               <span className="text-sm font-medium">Documents</span>
@@ -153,7 +153,7 @@ const Overview: React.FC<OverviewProps> = ({
             
             <button 
               onClick={() => onSectionChange('analytics')}
-              className="flex items-center justify-center gap-2 p-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <BarChart3 className="w-4 h-4" />
               <span className="text-sm font-medium">Analytics</span>
