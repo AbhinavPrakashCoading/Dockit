@@ -4,9 +4,20 @@
  * SERVER-SIDE ONLY - Uses Node.js specific libraries
  */
 
-import puppeteer, { Browser, Page } from 'puppeteer';
+// Conditional imports for serverless compatibility
+let puppeteer: any;
+let html2canvas: any;
+
+try {
+  if (typeof window === 'undefined') {
+    puppeteer = require('puppeteer');
+    html2canvas = require('html2canvas');
+  }
+} catch (error) {
+  console.warn('Native browser automation dependencies not available in serverless environment');
+}
+
 import * as cheerio from 'cheerio';
-import html2canvas from 'html2canvas';
 import { TextIntelligence } from '../intelligence/TextIntelligence';
 import { DocumentClassifier } from '../intelligence/DocumentClassifier';
 
@@ -82,7 +93,7 @@ export interface ChangeDetection {
 }
 
 export class VisualWebScraper {
-  private browser: Browser | null = null;
+  private browser: any = null;
   private textIntelligence: TextIntelligence;
   private documentClassifier: DocumentClassifier;
   
@@ -94,7 +105,11 @@ export class VisualWebScraper {
   /**
    * Initialize browser for web scraping
    */
-  private async initBrowser(): Promise<Browser> {
+  private async initBrowser(): Promise<any> {
+    if (!puppeteer) {
+      throw new Error('Puppeteer not available in serverless environment');
+    }
+
     if (!this.browser) {
       this.browser = await puppeteer.launch({
         headless: true,

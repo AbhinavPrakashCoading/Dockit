@@ -5,7 +5,16 @@
  */
 
 import { Matrix } from 'ml-matrix';
-import * as brain from 'brain.js';
+// Conditional import for serverless environments
+let brain: any = null;
+try {
+  // Only import brain.js in Node.js environments, not during build
+  if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production') {
+    brain = require('brain.js');
+  }
+} catch (error) {
+  console.warn('brain.js not available in this environment:', error);
+}
 import * as ss from 'simple-statistics';
 import { SmartValidationResult } from '../intelligence/SmartValidationEngine';
 import { AdaptiveLearningSystem, ValidationOutcome, UserFeedback } from './AdaptiveLearningSystem';
@@ -83,7 +92,7 @@ export interface PredictiveModel {
   lastTrained: Date;
   inputFeatures: string[];
   weights: number[];
-  neuralNetwork?: brain.NeuralNetwork<any, any>;
+  neuralNetwork?: any; // brain.NeuralNetwork when available
 }
 
 export interface RealTimeAlert {
@@ -120,6 +129,10 @@ export class PredictiveValidationEngine {
     
     documentTypes.forEach(docType => {
       // Initialize neural network for complex predictions
+      if (!brain) {
+        throw new Error('Brain.js not available in this environment');
+      }
+      
       const neuralNetwork = new brain.NeuralNetwork({
         hiddenLayers: [10, 8, 6],
         activation: 'sigmoid',

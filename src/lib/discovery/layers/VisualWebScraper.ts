@@ -3,9 +3,18 @@
  * Intelligently scrapes exam websites to extract requirements
  */
 
-import puppeteer from 'puppeteer';
+// Conditional imports for serverless environments
+let puppeteer: any = null;
+try {
+  if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production') {
+    puppeteer = require('puppeteer');
+  }
+} catch (error) {
+  console.warn('puppeteer not available in this environment:', error);
+}
+
 import axios from 'axios';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
 interface ScrapingOptions {
   examName: string;
