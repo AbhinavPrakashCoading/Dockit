@@ -1,4 +1,4 @@
-import 'styles/tailwind.css';
+import '@/styles/tailwind.css';
 import type { Metadata } from 'next';
 import { Providers } from '@/components/providers';
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'DocKit - Document Intelligence Platform',
     description: 'Enterprise-grade autonomous document intelligence with AI validation and smart processing.',
-    url: 'https://dockit.com',
+    url: 'https://dockit.rythmiq.in',
     siteName: 'DocKit',
     images: [
       {
