@@ -33,16 +33,32 @@ export const useUploadWorkflow = () => {
 
   // Enhanced exam selection with schema loading
   const handleExamSelection = useCallback(async (exam: any) => {
+    console.log('🔍 Upload workflow selecting exam:', exam.name);
+    console.log('📊 Exam has schema:', !!exam.schema);
+    console.log('📄 Schema has documents:', !!exam.schema?.documents);
+    console.log('🔢 Document count:', exam.schema?.documents?.length || 0);
+    
     setSelectedExam(exam);
     setSchemaLoading(true);
     
     try {
       await examDataSelection(exam);
-      setSelectedExamSchema(exam.schema);
+      
+      // For parsed documents, the schema should already be available
+      if (exam.schema) {
+        console.log('✅ Using exam schema directly');
+        console.log('📋 Setting schema with documents:', exam.schema.documents?.length || 0);
+        setSelectedExamSchema(exam.schema);
+      } else {
+        console.log('⚠️ No schema found in exam object');
+        setSelectedExamSchema(null);
+      }
     } catch (error) {
-      console.error('Error loading exam schema:', error);
+      console.error('❌ Error loading exam schema:', error);
+      setSelectedExamSchema(null);
     } finally {
       setSchemaLoading(false);
+      console.log('🏁 Schema loading complete');
     }
   }, [examDataSelection]);
 

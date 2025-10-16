@@ -236,6 +236,7 @@ const UploadSection: React.FC<UploadSectionProps> = ({
         onBack={previousStep}
         onNext={handleUploadNext}
         selectedExam={selectedExam}
+        selectedExamSchema={selectedExamSchema}
         uploadedFiles={uploadedFiles}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -247,6 +248,9 @@ const UploadSection: React.FC<UploadSectionProps> = ({
       <ProcessingModal
         isOpen={currentStep === 'processing'}
         onClose={resetWorkflow}
+        selectedExam={selectedExam}
+        uploadedFiles={uploadedFiles}
+        documentMapping={uploadedFiles} // Pass the uploaded files as document mapping
       />
     </div>
   );

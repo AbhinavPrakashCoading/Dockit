@@ -21,13 +21,15 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
   const processingDocuments = documents.filter(doc => doc.status === 'processing').length;
   const validationRate = totalDocuments > 0 ? Math.round((validatedDocuments / totalDocuments) * 100) : 0;
 
-  // Recent activity simulation
-  const recentActivity = [
-    { action: 'Document validated', document: 'Assignment_1.pdf', time: '2 minutes ago', status: 'success' },
-    { action: 'Processing started', document: 'Project_Report.docx', time: '15 minutes ago', status: 'processing' },
-    { action: 'ZIP package created', document: 'Exam_Documents.zip', time: '1 hour ago', status: 'success' },
-    { action: 'Document uploaded', document: 'Research_Paper.pdf', time: '2 hours ago', status: 'info' },
-  ];
+  // Generate recent activity from actual document data
+  const recentActivity = documents
+    .slice(0, 4) // Get last 4 documents
+    .map(doc => ({
+      action: `Document ${doc.status === 'validated' ? 'validated' : doc.status === 'processing' ? 'processing' : 'uploaded'}`,
+      document: doc.name || 'Unknown document',
+      time: doc.uploadDate ? new Date(doc.uploadDate).toLocaleString() : 'Recently',
+      status: doc.status === 'validated' ? 'success' : doc.status === 'processing' ? 'processing' : 'info'
+    }));
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -78,36 +80,71 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Performance Chart Placeholder */}
+        {/* Processing Performance Chart */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Processing Performance</h3>
             <BarChart3 className="w-5 h-5 text-gray-400" />
           </div>
-          <div className="text-center py-12 text-gray-500">
-            <BarChart3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Performance charts coming soon</p>
-            <p className="text-xs text-gray-400 mt-1">Track processing times and success rates</p>
-          </div>
+          {documents.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <BarChart3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No processing data available</p>
+              <p className="text-xs text-gray-400 mt-1">Upload documents to see performance metrics</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600">Success Rate</span>
+                <span className="text-lg font-bold text-green-600">
+                  {Math.round(((documents.filter(d => d.status === 'validated').length) / documents.length) * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-green-500 h-2 rounded-full" 
+                  style={{ width: `${((documents.filter(d => d.status === 'validated').length) / documents.length) * 100}%` }}
+                ></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900">{documents.length}</p>
+                  <p className="text-xs text-gray-500">Total Processed</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{processingDocuments}</p>
+                  <p className="text-xs text-gray-500">Currently Processing</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Recent Activity */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-          <div className="space-y-3">
-            {recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                <div className="flex items-center gap-3">
-                  {getStatusIcon(activity.status)}
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-xs text-gray-500">{activity.document}</p>
+          {recentActivity.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No recent activity</p>
+              <p className="text-xs text-gray-400 mt-1">Upload some documents to see activity here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(activity.status)}
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                      <p className="text-xs text-gray-500">{activity.document}</p>
+                    </div>
                   </div>
+                  <span className="text-xs text-gray-400">{activity.time}</span>
                 </div>
-                <span className="text-xs text-gray-400">{activity.time}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

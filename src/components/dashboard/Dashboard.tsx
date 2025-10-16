@@ -1,7 +1,7 @@
 // New Streamlined Dashboard Component with Lazy Loading
 'use client';
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from './DashboardLayout';
@@ -10,6 +10,7 @@ import DashboardHeader from './DashboardHeader';
 import { ActiveSection, User } from './types';
 import { useDashboardData } from './hooks/useDashboardData';
 import { useExamData } from './hooks/useExamData';
+import { DashboardDataProvider } from './hooks/DashboardDataProvider';
 import ExamSelectorModal from './components/WorkflowModals/ExamSelectorModal';
 import UploadModal from './components/WorkflowModals/UploadModal';
 import ProcessingModal from './components/WorkflowModals/ProcessingModal';
@@ -81,33 +82,77 @@ const Dashboard: React.FC = () => {
   // Conditional data hooks - only load when needed
   const shouldLoadData = mounted && status === 'authenticated';
   
-  // Data hooks - only instantiate when ready
-  const dashboardData = shouldLoadData ? useDashboardData(user) : {
-    documents: [],
-    setDocuments: () => {},
-    processingJobs: [],
-    setProcessingJobs: () => {},
-    notifications: [],
-    addNotification: () => {},
-    removeNotification: () => {},
-    drafts: [],
-    setDrafts: () => {},
-    loading: false,
-    updateDocument: () => {},
-    refetch: async () => {}
-  };
+  return (
+    <DashboardDataProvider user={user} shouldLoadData={shouldLoadData}>
+      {({ dashboardData, examData }) => (
+        <DashboardContent 
+          user={user}
+          shouldLoadData={shouldLoadData}
+          dashboardData={dashboardData}
+          examData={examData}
+        />
+      )}
+    </DashboardDataProvider>
+  );
+};
 
-  const examData = shouldLoadData ? useExamData() : {
-    exams: [],
-    popularExams: [],
-    filteredExams: [],
-    examsLoading: false,
-    selectedExam: null,
-    selectedExamSchema: null,
-    schemaLoading: false,
-    handleExamSelection: () => {},
-    filterExams: () => {}
-  };
+// Separate component for dashboard content
+const DashboardContent: React.FC<{
+  user: User;
+  shouldLoadData: boolean;
+  dashboardData: any;
+  examData: any;
+}> = ({ user, shouldLoadData, dashboardData, examData }) => {
+  const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [currentStep, setCurrentStep] = useState<string | null>(null);
+  const [workflowSearchQuery, setWorkflowSearchQuery] = useState('');
+  
+  // State for tracking uploaded and processed files
+  const [workflowUploadedFiles, setWorkflowUploadedFiles] = useState<{ [key: string]: File }>({});
+  const [workflowDocumentMapping, setWorkflowDocumentMapping] = useState<{ [key: string]: File }>({});
+  const [workflowTransformedFiles, setWorkflowTransformedFiles] = useState<{ [key: string]: File }>({});
+
+  // Create stable references for empty objects to prevent infinite re-renders
+  const emptyUploadedFiles = useMemo(() => ({}), []);
+  const emptyDocumentMapping = useMemo(() => ({}), []);
+
+  // Handle workflow file uploads
+  const handleWorkflowFilesSelected = useCallback((files: File[]) => {
+    console.log('📤 Workflow files selected:', files.length);
+    const newUploadedFiles = { ...workflowUploadedFiles };
+    files.forEach((file, index) => {
+      newUploadedFiles[`file_${Date.now()}_${index}`] = file;
+    });
+    setWorkflowUploadedFiles(newUploadedFiles);
+  }, [workflowUploadedFiles]);
+
+  // Handle document mapping from UploadModal
+  const handleDocumentMapping = useCallback((mapping: { [key: string]: File }) => {
+    console.log('🔗 Document mapping updated:', Object.keys(mapping));
+    setWorkflowDocumentMapping(mapping);
+  }, []);
+
+  // Handle processing completion from ProcessingModal
+  const handleProcessingComplete = useCallback((transformedFiles: { [key: string]: File }) => {
+    console.log('✅ Processing completed with transformed files:', Object.keys(transformedFiles));
+    setWorkflowTransformedFiles(transformedFiles);
+    
+    // You could also trigger additional actions here like:
+    // - Navigate to a success page
+    // - Show a success notification
+    // - Auto-download the files
+    // - Move to the next step in your workflow
+  }, []);
+
+  // Reset workflow when closing
+  const resetWorkflow = useCallback(() => {
+    console.log('🔄 Resetting workflow');
+    setCurrentStep(null);
+    setWorkflowUploadedFiles({});
+    setWorkflowDocumentMapping({});
+    setWorkflowTransformedFiles({});
+  }, []);
 
   const {
     documents,
@@ -136,6 +181,15 @@ const Dashboard: React.FC = () => {
     handleExamSelection,
     filterExams
   } = examData;
+
+  // Debug exam data for main Dashboard
+  console.log('📊 Main Dashboard exam data:');
+  console.log('   - Exams count:', exams.length);
+  console.log('   - Popular exams count:', popularExams.length);
+  console.log('   - Loading:', examsLoading);
+  if (exams.length > 0) {
+    console.log('   - First exam:', exams[0]);
+  }
 
   // Common props for all sections
   const sectionProps = {
@@ -228,13 +282,21 @@ const Dashboard: React.FC = () => {
       {currentStep === 'exam-selector' && (
         <ExamSelectorModal
           isOpen={true}
-          onClose={() => setCurrentStep(null)}
-          onExamSelect={handleExamSelection}
+          onClose={() => {
+            console.log('🚪 Main Dashboard modal closed');
+            setCurrentStep(null);
+          }}
+          onExamSelect={(exam) => {
+            console.log('🎯 Main Dashboard exam selected:', exam.name);
+            console.log('📋 Exam data received:', exam);
+            handleExamSelection(exam);
+            setCurrentStep('upload');
+          }}
           searchQuery={workflowSearchQuery}
           onSearchChange={setWorkflowSearchQuery}
-          exams={exams}
-          popularExams={popularExams}
-          filteredExams={filteredExams}
+          exams={exams || []}
+          popularExams={popularExams || []}
+          filteredExams={filteredExams || []}
           examsLoading={examsLoading}
         />
       )}
@@ -242,23 +304,28 @@ const Dashboard: React.FC = () => {
       {currentStep === 'upload' && selectedExam && (
         <UploadModal
           isOpen={true}
-          onClose={() => setCurrentStep(null)}
+          onClose={resetWorkflow}
           onBack={() => setCurrentStep('exam-selector')}
           onNext={() => setCurrentStep('processing')}
           selectedExam={selectedExam}
-          uploadedFiles={{}}
+          uploadedFiles={workflowUploadedFiles}
           onDrop={(e) => e.preventDefault()}
           onDragOver={(e) => e.preventDefault()}
           onDragLeave={(e) => e.preventDefault()}
-          onFilesSelected={(files) => console.log('Files selected:', files)}
+          onFilesSelected={handleWorkflowFilesSelected}
           dragOver={false}
+          onDocumentMapping={handleDocumentMapping}
         />
       )}
       
       {currentStep === 'processing' && (
         <ProcessingModal
           isOpen={true}
-          onClose={() => setCurrentStep(null)}
+          onClose={resetWorkflow}
+          selectedExam={selectedExam}
+          uploadedFiles={workflowUploadedFiles}
+          documentMapping={workflowDocumentMapping}
+          onProcessingComplete={handleProcessingComplete}
         />
       )}
     </DashboardLayout>

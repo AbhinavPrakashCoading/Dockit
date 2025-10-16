@@ -1,48 +1,9 @@
-// Custom hook for exam data and schema management
+// Custom hook for exam data and schema management - ONLY PARSED DOCUMENTS
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { ExamConfig } from '../types';
-
-// Legacy exams fallback data
-const legacyExams = [
-  { 
-    id: 'upsc', 
-    name: 'UPSC', 
-    category: 'Civil Services', 
-    logo: '🏛️', 
-    color: 'bg-blue-100 text-blue-600',
-    hasSchema: true,
-    requiredDocuments: ['photo', 'signature', 'idProof', 'ageProof']
-  },
-  { 
-    id: 'ssc', 
-    name: 'SSC', 
-    category: 'Government', 
-    logo: '📋', 
-    color: 'bg-green-100 text-green-600',
-    hasSchema: true,
-    requiredDocuments: ['photo', 'signature', 'idProof', 'ageProof']
-  },
-  { 
-    id: 'ielts', 
-    name: 'IELTS', 
-    category: 'Language', 
-    logo: '🌐', 
-    color: 'bg-purple-100 text-purple-600',
-    hasSchema: true,
-    requiredDocuments: ['photo', 'signature', 'idProof']
-  },
-  { 
-    id: 'ibps-po', 
-    name: 'IBPS PO', 
-    category: 'Banking', 
-    logo: '🏦', 
-    color: 'bg-indigo-100 text-indigo-600',
-    hasSchema: true,
-    requiredDocuments: ['photo', 'signature', 'idProof', 'educationCertificate']
-  }
-];
+import { getExamIcon, getExamColor, loadParsedDocuments, getExamSchema, searchExams } from '@/features/exam/optimizedExamRegistry';
 
 export const useExamData = () => {
   const [availableExams, setAvailableExams] = useState<any[]>([]);
@@ -54,45 +15,116 @@ export const useExamData = () => {
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [filteredExams, setFilteredExams] = useState<any[]>([]);
 
-  // Load optimized exams on component mount
+  // Load only parsed documents from data folder
   useEffect(() => {
-    const loadExams = async () => {
-      // Set examsLoading to false immediately to prevent blocking
-      setExamsLoading(false);
+    const initializeParsedDocuments = async () => {
+      setExamsLoading(true);
       
-      // Use fallback data immediately for fast loading
-      setAvailableExams(legacyExams);
-      setPopularExamsData(legacyExams.slice(0, 4));
-      setDynamicExams(legacyExams as any);
-
-      // Load real data in background if available
       try {
-        const examRegistry = await import('@/features/exam/optimizedExamRegistry').catch(() => null);
-        const dynamicLoader = await import('@/lib/dynamicSchemaLoader').catch(() => null);
+        console.log('🔄 Loading parsed documents only...');
         
-        if (examRegistry?.getExamsWithSchemaStatus && examRegistry?.getPopularExams) {
-          // Load optimized exam data in background
-          const [examsWithStatus, popularExams] = await Promise.all([
-            examRegistry.getExamsWithSchemaStatus(),
-            examRegistry.getPopularExams(8)
-          ]);
+        // Load parsed documents using imported function
+        const parsedDocuments = await loadParsedDocuments();
+        
+        console.log(`📄 Loaded ${parsedDocuments.length} parsed documents`);
+        
+        // If no documents from API, use fallback for testing
+        if (parsedDocuments.length === 0) {
+          console.log('⚠️ No parsed documents found, creating fallback exam for testing...');
+          // Create a fallback exam for testing
+          const fallbackExam = {
+            id: "jee-mains-2025-fallback",
+            name: "JEE Mains 2025 (Test Mode)",
+            category: "Engineering",
+            logo: getExamIcon("jee"),
+            color: getExamColor("jee"),
+            hasSchema: true,
+            isSchemaLoaded: true,
+            schema: {
+              exam: "JEE Mains 2025",
+              documents: [
+                { type: "Photo", requirements: { mandatory: true } },
+                { type: "Signature", requirements: { mandatory: true } },
+                { type: "ID Proof", requirements: { mandatory: true } },
+                { type: "Class 10th Marksheet", requirements: { mandatory: true } },
+                { type: "Class 12th Marksheet", requirements: { mandatory: true } },
+                { type: "Category Certificate", requirements: { mandatory: false } },
+                { type: "PwD Certificate", requirements: { mandatory: false } }
+              ]
+            },
+            source: 'fallback',
+            requiredDocuments: ["Photo", "Signature", "ID Proof", "Class 10th Marksheet", "Class 12th Marksheet", "Category Certificate", "PwD Certificate"],
+            documentCount: 7,
+            confidence: 1
+          };
           
-          setAvailableExams(examsWithStatus);
-          setPopularExamsData(popularExams);
+          console.log('✅ Using fallback exam for testing');
+          setAvailableExams([fallbackExam]);
+          setPopularExamsData([fallbackExam]);
+          setDynamicExams([fallbackExam] as any);
+          return;
         }
         
-        if (dynamicLoader?.loadAvailableExams) {
-          // Load dynamic exams in background
-          const loadedExams = await dynamicLoader.loadAvailableExams();
-          setDynamicExams(loadedExams);
-        }
+        // Convert parsed documents to exam format
+        const parsedExams = parsedDocuments.map((doc: any) => ({
+          id: doc.id,
+          name: doc.examName,
+          category: doc.examType || 'Parsed',
+          logo: getExamIcon(doc.examType || doc.examName),
+          color: getExamColor(doc.examType || doc.examName),
+          hasSchema: true,
+          isSchemaLoaded: true,
+          schema: doc.parsedJson,
+          source: 'parsed-document',
+          requiredDocuments: doc.parsedJson?.documents?.map((d: any) => d.type) || [],
+          documentCount: doc.documentCount || doc.parsedJson?.documents?.length || 0,
+          confidence: doc.confidence || 1,
+          createdAt: doc.createdAt,
+          originalText: doc.originalText
+        }));
+        
+        console.log(`✅ Converted ${parsedExams.length} parsed exams`);
+        
+        setAvailableExams(parsedExams);
+        setPopularExamsData(parsedExams); // All parsed docs are "popular"
+        setDynamicExams(parsedExams as any);
+        
       } catch (error) {
-        console.log('Background exam loading failed, using fallback data');
-        // Keep using fallback data
+        console.error('❌ Error loading parsed documents:', error);
+        console.log('🔄 Using fallback exam due to error...');
+        
+        // Use fallback on error
+        const fallbackExam = {
+          id: "jee-mains-2025-error-fallback",
+          name: "JEE Mains 2025 (Offline Mode)",
+          category: "Engineering",
+          logo: getExamIcon("jee"),
+          color: getExamColor("jee"),
+          hasSchema: true,
+          isSchemaLoaded: true,
+          schema: {
+            exam: "JEE Mains 2025",
+            documents: [
+              { type: "Photo", requirements: { mandatory: true } },
+              { type: "Signature", requirements: { mandatory: true } },
+              { type: "ID Proof", requirements: { mandatory: true } }
+            ]
+          },
+          source: 'fallback-error',
+          requiredDocuments: ["Photo", "Signature", "ID Proof"],
+          documentCount: 3,
+          confidence: 1
+        };
+        
+        setAvailableExams([fallbackExam]);
+        setPopularExamsData([fallbackExam]);
+        setDynamicExams([fallbackExam]);
+      } finally {
+        setExamsLoading(false);
       }
     };
 
-    loadExams();
+    initializeParsedDocuments();
   }, []);
 
   // Filter exams based on search query
@@ -103,23 +135,9 @@ export const useExamData = () => {
     }
 
     try {
-      // Try to use search functionality from exam registry
-      const examRegistry = await import('@/features/exam/optimizedExamRegistry').catch(() => null);
-      
-      if (examRegistry?.searchExams) {
-        const searchResults = await examRegistry.searchExams(searchQuery);
-        setFilteredExams(searchResults);
-      } else {
-        // Fallback to local filtering
-        const allExams = availableExams.length > 0 ? availableExams : dynamicExams;
-        const localFiltered = allExams
-          .filter(exam => exam.hasSchema || exam.schema)
-          .filter(exam =>
-            exam.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            exam.category.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        setFilteredExams(localFiltered);
-      }
+      // Use imported search function
+      const searchResults = await searchExams(searchQuery);
+      setFilteredExams(searchResults);
     } catch (error) {
       console.error('Error filtering exams:', error);
       // Basic local filtering as final fallback
@@ -138,13 +156,15 @@ export const useExamData = () => {
     setSchemaLoading(true);
     
     try {
-      // Try to load schema from exam registry
-      const examRegistry = await import('@/features/exam/optimizedExamRegistry').catch(() => null);
+      console.log('🔄 Loading schema for exam:', exam.id, exam.name);
       
-      if (examRegistry?.getExamSchema && exam.id) {
-        const schema = await examRegistry.getExamSchema(exam.id);
-        setSelectedExamSchema(schema);
+      // Use imported getExamSchema function
+      if (exam.id) {
+        const schema = await getExamSchema(exam.id);
+        console.log('✅ Schema loaded successfully:', schema ? 'Found' : 'Not found');
+        setSelectedExamSchema(schema || exam.schema);
       } else {
+        console.log('⚠️ No exam ID, using existing schema');
         // Use exam's existing schema or create a basic one
         setSelectedExamSchema(exam.schema || {
           examId: exam.id,
@@ -157,9 +177,11 @@ export const useExamData = () => {
         });
       }
     } catch (error) {
-      console.error('Error loading schema:', error);
-      // Basic fallback schema
-      setSelectedExamSchema({
+      console.error('❌ Error loading schema:', error);
+      console.log('🔄 Using fallback schema for:', exam.name);
+      
+      // Use exam's existing schema as fallback
+      setSelectedExamSchema(exam.schema || {
         examId: exam.id,
         examName: exam.name,
         requirements: [

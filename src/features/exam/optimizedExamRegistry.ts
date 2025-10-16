@@ -1,111 +1,160 @@
 /**
  * Performance-Optimized Dashboard Exam Configuration
- * Uses lazy-loaded schema registry for better performance
+ * Now only loads from parsed documents - no placeholder schemas
  */
 
-import { getSchemaMetadata, getSchema } from '@/features/exam/schemas/schemaRegistry';
-
-// Lightweight exam display data (loaded immediately)
-export const examDisplayData = [
-  // Government Exams
-  { id: 'upsc-cse', name: 'UPSC CSE', category: 'Civil Services', logo: '🏛️', color: 'bg-blue-100 text-blue-600' },
-  { id: 'ssc-cgl', name: 'SSC CGL', category: 'Government', logo: '📋', color: 'bg-green-100 text-green-600' },
-  { id: 'ibps-po', name: 'IBPS PO', category: 'Banking', logo: '🏦', color: 'bg-indigo-100 text-indigo-600' },
-  { id: 'sbi-po', name: 'SBI PO', category: 'Banking', logo: '🏛️', color: 'bg-blue-100 text-blue-600' },
-  { id: 'rrb-ntpc', name: 'RRB NTPC', category: 'Railway', logo: '🚂', color: 'bg-red-100 text-red-600' },
-  
-  // Entrance Exams
-  { id: 'jee-main', name: 'JEE Main', category: 'Engineering', logo: '⚙️', color: 'bg-orange-100 text-orange-600' },
-  { id: 'jee-advanced', name: 'JEE Advanced', category: 'Engineering', logo: '⚡', color: 'bg-yellow-100 text-yellow-600' },
-  { id: 'neet-ug', name: 'NEET UG', category: 'Medical', logo: '🩺', color: 'bg-pink-100 text-pink-600' },
-  { id: 'cat', name: 'CAT', category: 'Management', logo: '📊', color: 'bg-purple-100 text-purple-600' },
-  { id: 'gate', name: 'GATE', category: 'Engineering', logo: '🎓', color: 'bg-teal-100 text-teal-600' },
-  
-  // International Exams
-  { id: 'ielts', name: 'IELTS', category: 'Language', logo: '🌍', color: 'bg-emerald-100 text-emerald-600' },
-  { id: 'toefl', name: 'TOEFL', category: 'Language', logo: '🗣️', color: 'bg-cyan-100 text-cyan-600' },
-  { id: 'gre', name: 'GRE', category: 'Graduate', logo: '🎯', color: 'bg-violet-100 text-violet-600' },
-  { id: 'gmat', name: 'GMAT', category: 'Business', logo: '💼', color: 'bg-slate-100 text-slate-600' },
-  { id: 'sat', name: 'SAT', category: 'Undergraduate', logo: '📝', color: 'bg-amber-100 text-amber-600' },
-  
-  // Professional Exams
-  { id: 'ca-foundation', name: 'CA Foundation', category: 'Accounting', logo: '📊', color: 'bg-lime-100 text-lime-600' },
-  { id: 'cfa-level1', name: 'CFA Level 1', category: 'Finance', logo: '💰', color: 'bg-emerald-100 text-emerald-600' },
-  { id: 'frm-part1', name: 'FRM Part 1', category: 'Risk Management', logo: '⚖️', color: 'bg-red-100 text-red-600' },
-  
-  // State Exams (Popular ones)
-  { id: 'mpsc', name: 'MPSC', category: 'Maharashtra PSC', logo: '🏛️', color: 'bg-orange-100 text-orange-600' },
-  { id: 'tnpsc', name: 'TNPSC', category: 'Tamil Nadu PSC', logo: '🏛️', color: 'bg-blue-100 text-blue-600' },
-  { id: 'kpsc', name: 'KPSC', category: 'Karnataka PSC', logo: '🏛️', color: 'bg-yellow-100 text-yellow-600' },
-  { id: 'uppsc', name: 'UPPSC', category: 'UP PSC', logo: '🏛️', color: 'bg-green-100 text-green-600' },
-  
-  // Banking Exams
-  { id: 'ibps-clerk', name: 'IBPS Clerk', category: 'Banking', logo: '📋', color: 'bg-indigo-100 text-indigo-600' },
-  { id: 'sbi-clerk', name: 'SBI Clerk', category: 'Banking', logo: '🏛️', color: 'bg-blue-100 text-blue-600' },
-  { id: 'rbi-grade-b', name: 'RBI Grade B', category: 'Banking', logo: '🏦', color: 'bg-purple-100 text-purple-600' },
-];
+// This registry now only provides helper functions for parsed documents
+// All exam data comes from the data/parsed-documents folder
 
 /**
- * Get exam display information with schema availability status
+ * Get exam icon based on exam type/name
  */
-export async function getExamsWithSchemaStatus() {
-  const schemaMetadata = getSchemaMetadata();
+export function getExamIcon(examType: string): string {
+  const type = examType?.toLowerCase() || '';
   
-  return examDisplayData.map(exam => ({
-    ...exam,
-    hasSchema: !!schemaMetadata[exam.id],
-    isSchemaLoaded: schemaMetadata[exam.id]?.isLoaded || false
-  }));
+  // Engineering
+  if (type.includes('jee') || type.includes('engineering')) return '⚙️';
+  if (type.includes('gate')) return '🎓';
+  
+  // Medical
+  if (type.includes('neet') || type.includes('medical')) return '🩺';
+  
+  // Government/Civil Services
+  if (type.includes('upsc') || type.includes('civil') || type.includes('psc')) return '🏛️';
+  if (type.includes('ssc')) return '📋';
+  
+  // Banking
+  if (type.includes('bank') || type.includes('ibps') || type.includes('sbi') || type.includes('rbi')) return '🏦';
+  
+  // Management
+  if (type.includes('cat') || type.includes('management') || type.includes('mba')) return '📊';
+  if (type.includes('gmat')) return '💼';
+  
+  // Language
+  if (type.includes('ielts') || type.includes('toefl') || type.includes('language')) return '�';
+  
+  // Professional
+  if (type.includes('ca') || type.includes('accounting')) return '📊';
+  if (type.includes('cfa') || type.includes('finance')) return '💰';
+  if (type.includes('frm') || type.includes('risk')) return '⚖️';
+  
+  // Default
+  return '📄';
 }
 
 /**
- * Get exam schema on demand (lazy loaded)
+ * Get exam color based on exam type/name
+ */
+export function getExamColor(examType: string): string {
+  const type = examType?.toLowerCase() || '';
+  
+  // Engineering
+  if (type.includes('jee') || type.includes('engineering')) return 'bg-orange-100 text-orange-600';
+  if (type.includes('gate')) return 'bg-teal-100 text-teal-600';
+  
+  // Medical
+  if (type.includes('neet') || type.includes('medical')) return 'bg-pink-100 text-pink-600';
+  
+  // Government/Civil Services
+  if (type.includes('upsc') || type.includes('civil')) return 'bg-blue-100 text-blue-600';
+  if (type.includes('ssc')) return 'bg-green-100 text-green-600';
+  if (type.includes('psc')) return 'bg-indigo-100 text-indigo-600';
+  
+  // Banking
+  if (type.includes('bank') || type.includes('ibps') || type.includes('sbi')) return 'bg-blue-100 text-blue-600';
+  if (type.includes('rbi')) return 'bg-purple-100 text-purple-600';
+  
+  // Management
+  if (type.includes('cat') || type.includes('management') || type.includes('mba')) return 'bg-purple-100 text-purple-600';
+  if (type.includes('gmat')) return 'bg-slate-100 text-slate-600';
+  
+  // Language
+  if (type.includes('ielts')) return 'bg-emerald-100 text-emerald-600';
+  if (type.includes('toefl')) return 'bg-cyan-100 text-cyan-600';
+  
+  // Professional
+  if (type.includes('ca') || type.includes('accounting')) return 'bg-lime-100 text-lime-600';
+  if (type.includes('cfa') || type.includes('finance')) return 'bg-emerald-100 text-emerald-600';
+  if (type.includes('frm') || type.includes('risk')) return 'bg-red-100 text-red-600';
+  
+  // Default
+  return 'bg-gray-100 text-gray-600';
+}
+
+/**
+ * Load parsed documents from API
+ */
+export async function loadParsedDocuments() {
+  try {
+    console.log('🔄 Attempting to load parsed documents from API...');
+    const response = await fetch('/api/parsed-documents-fallback');
+    
+    if (!response.ok) {
+      console.error('❌ API response not ok:', response.status, response.statusText);
+      throw new Error(`Failed to load parsed documents: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Successfully loaded parsed documents:', data.data?.length || 0, 'documents');
+    return data.data || [];
+  } catch (error) {
+    console.error('❌ Error loading parsed documents:', error);
+    
+    // Return empty array as fallback - this will allow the app to continue working
+    // even if there are no parsed documents yet
+    console.log('🔄 Returning empty array as fallback');
+    return [];
+  }
+}
+
+/**
+ * Get exam schema from parsed document
  */
 export async function getExamSchema(examId: string) {
-  return await getSchema(examId);
+  try {
+    console.log('🔄 Loading schema for exam ID:', examId);
+    const parsedDocs = await loadParsedDocuments();
+    const doc = parsedDocs.find((d: any) => d.id === examId);
+    
+    if (doc) {
+      console.log('✅ Found document with schema:', doc.examName);
+      return doc.parsedJson || null;
+    } else {
+      console.log('⚠️ No document found for exam ID:', examId);
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ Error getting exam schema:', error);
+    return null;
+  }
 }
 
 /**
- * Get popular exams (with schemas available)
- */
-export async function getPopularExams(limit = 6) {
-  const examsWithStatus = await getExamsWithSchemaStatus();
-  return examsWithStatus
-    .filter(exam => exam.hasSchema)
-    .slice(0, limit);
-}
-
-/**
- * Filter exams by category
- */
-export async function getExamsByCategory(category: string) {
-  const examsWithStatus = await getExamsWithSchemaStatus();
-  return examsWithStatus.filter(exam => 
-    exam.category.toLowerCase().includes(category.toLowerCase()) && exam.hasSchema
-  );
-}
-
-/**
- * Search exams by name or category
+ * Search exams in parsed documents
  */
 export async function searchExams(query: string) {
-  if (!query.trim()) return [];
-  
-  const examsWithStatus = await getExamsWithSchemaStatus();
+  const parsedDocs = await loadParsedDocuments();
   const searchTerm = query.toLowerCase();
   
-  return examsWithStatus.filter(exam => 
-    (exam.name.toLowerCase().includes(searchTerm) || 
-     exam.category.toLowerCase().includes(searchTerm)) &&
-    exam.hasSchema
-  );
+  return parsedDocs
+    .filter((doc: any) => 
+      doc.examName?.toLowerCase().includes(searchTerm) ||
+      doc.examType?.toLowerCase().includes(searchTerm)
+    )
+    .map((doc: any) => ({
+      id: doc.id,
+      name: doc.examName,
+      category: doc.examType || 'Parsed',
+      logo: getExamIcon(doc.examType || doc.examName),
+      color: getExamColor(doc.examType || doc.examName),
+      hasSchema: true,
+      isSchemaLoaded: true,
+      schema: doc.parsedJson,
+      source: 'parsed-document',
+      requiredDocuments: doc.parsedJson?.documents?.map((d: any) => d.type) || [],
+      documentCount: doc.documentCount || doc.parsedJson?.documents?.length || 0,
+      confidence: doc.confidence || 1,
+      createdAt: doc.createdAt,
+      originalText: doc.originalText
+    }));
 }
-
-export default {
-  examDisplayData,
-  getExamsWithSchemaStatus,
-  getExamSchema,
-  getPopularExams,
-  getExamsByCategory,
-  searchExams
-};

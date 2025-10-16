@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Extraction Tool - Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto p-6 max-w-6xl">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">📋 Schema Extraction Tool</h1>
+            <p class="text-gray-600">
+                Automatically extract document requirements from exam URLs and PDFs
+            </p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-2 flex items-center gap-2">
+                🌐 Extract Schema from URL
+            </h2>
+            <p class="text-gray-600 mb-4">
+                Enter an exam notification URL or PDF link to extract document requirements
+            </p>
+            
+            <div class="space-y-4">
+                <div class="flex gap-2">
+                    <input
+                        id="urlInput"
+                        type="url"
+                        placeholder="https://ibpsonline.ibps.in/clerk25"
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                        id="extractBtn"
+                        onclick="extractSchema()"
+                        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
+                    >
+                        Extract Schema
+                    </button>
+                </div>
+
+                <!-- Example URLs -->
+                <div class="space-y-2">
+                    <p class="text-sm text-gray-600">Quick examples:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-2 py-1 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 text-sm" onclick="loadExample('https://ibpsonline.ibps.in/clerk25')">
+                            ibpsonline.ibps.in/clerk25
+                        </span>
+                        <span class="px-2 py-1 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 text-sm" onclick="loadExample('https://sbi.co.in/careers')">
+                            sbi.co.in/careers
+                        </span>
+                        <span class="px-2 py-1 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 text-sm" onclick="loadExample('https://upsconline.nic.in')">
+                            upsconline.nic.in
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div id="errorDiv" class="hidden p-3 bg-red-100 border border-red-300 rounded-lg text-red-700">
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingDiv" class="hidden bg-white rounded-lg shadow-md p-6 mb-6 text-center">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+            <p class="text-gray-600">Extracting schema from URL...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsDiv" class="hidden space-y-4">
+            <!-- Schema Overview -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 id="examTitle" class="text-xl font-semibold flex items-center gap-2">
+                            ✅ 
+                        </h2>
+                        <p id="examSource" class="text-gray-600 text-sm"></p>
+                    </div>
+                    <button
+                        onclick="downloadSchema()"
+                        class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                    >
+                        📥 Download JSON
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <p class="font-medium text-gray-600">Documents Found</p>
+                        <p id="docCount" class="text-2xl font-bold text-blue-600">0</p>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-600">Confidence</p>
+                        <p id="confidence" class="text-2xl font-bold text-green-600">0%</p>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-600">Method</p>
+                        <span id="method" class="inline-block px-2 py-1 bg-gray-100 rounded text-xs"></span>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-600">Content Type</p>
+                        <span id="contentType" class="inline-block px-2 py-1 bg-gray-100 rounded text-xs"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Container -->
+            <div id="documentsContainer" class="grid gap-4">
+            </div>
+
+            <!-- Raw JSON -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold mb-2">Raw JSON Schema</h3>
+                <p class="text-gray-600 text-sm mb-4">Complete extracted schema data</p>
+                <pre id="rawJson" class="bg-gray-100 p-4 rounded-lg text-xs overflow-auto max-h-96 text-gray-800"></pre>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div id="instructionsDiv" class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">How to Use</h2>
+            <div class="space-y-2 text-sm text-gray-700">
+                <p>1. Enter the URL of an exam notification page or PDF document</p>
+                <p>2. Click "Extract Schema" to automatically analyze the page</p>
+                <p>3. View the extracted document requirements in a structured format</p>
+                <p>4. Download the JSON schema for integration with your applications</p>
+                <br />
+                <p class="text-gray-600">
+                    <strong>Supported:</strong> HTML pages, PDF documents, dynamic JavaScript content
+                </p>
+                <br />
+                <p class="text-blue-600 font-medium">
+                    📋 This is a demo showing the UI interface. The backend schema extraction module is fully implemented and ready for integration.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSchema = null;
+
+        function loadExample(url) {
+            document.getElementById('urlInput').value = url;
+            hideError();
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorDiv');
+            errorDiv.textContent = '⚠️ ' + message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('errorDiv').classList.add('hidden');
+        }
+
+        function showLoading() {
+            document.getElementById('loadingDiv').classList.remove('hidden');
+            document.getElementById('resultsDiv').classList.add('hidden');
+            document.getElementById('instructionsDiv').classList.add('hidden');
+            document.getElementById('extractBtn').disabled = true;
+            document.getElementById('extractBtn').textContent = 'Extracting...';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingDiv').classList.add('hidden');
+            document.getElementById('extractBtn').disabled = false;
+            document.getElementById('extractBtn').textContent = 'Extract Schema';
+        }
+
+        function displaySchema(schema) {
+            currentSchema = schema;
+            
+            // Update overview
+            document.getElementById('examTitle').textContent = '✅ ' + schema.exam;
+            document.getElementById('examSource').textContent = schema.source;
+            document.getElementById('docCount').textContent = schema.documents.length;
+            document.getElementById('confidence').textContent = Math.round((schema.metadata?.confidence || 0) * 100) + '%';
+            document.getElementById('method').textContent = schema.metadata?.extractionMethod || 'unknown';
+            document.getElementById('contentType').textContent = schema.metadata?.contentType || 'unknown';
+
+            // Display documents
+            const container = document.getElementById('documentsContainer');
+            container.innerHTML = '';
+            
+            schema.documents.forEach((doc, index) => {
+                const docDiv = document.createElement('div');
+                docDiv.className = 'bg-white rounded-lg shadow-md p-6';
+                
+                const mandatoryClass = doc.requirements.mandatory ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700';
+                const mandatoryText = doc.requirements.mandatory ? 'Mandatory' : 'Optional';
+                
+                const formats = doc.requirements.format ? 
+                    doc.requirements.format.map(f => `<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">${f.toUpperCase()}</span>`).join(' ') :
+                    '<p class="text-gray-500 text-xs">Not specified</p>';
+                
+                const sizeInfo = [];
+                if (doc.requirements.maxSize) sizeInfo.push(`Max: ${doc.requirements.maxSize}`);
+                if (doc.requirements.minSize) sizeInfo.push(`Min: ${doc.requirements.minSize}`);
+                const sizeDisplay = sizeInfo.length > 0 ? 
+                    sizeInfo.map(s => `<p class="text-xs">${s}</p>`).join('') :
+                    '<p class="text-xs text-gray-500">Not specified</p>';
+                
+                const dimensionsDisplay = doc.requirements.dimensions ?
+                    `<p class="text-xs">${doc.requirements.dimensions.width} × ${doc.requirements.dimensions.height} px</p>
+                     ${doc.requirements.dimensions.ratio ? `<p class="text-xs text-gray-500">Ratio: ${doc.requirements.dimensions.ratio}</p>` : ''}` :
+                    '<p class="text-xs text-gray-500">Not specified</p>';
+                
+                docDiv.innerHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-semibold flex items-center gap-2">
+                            📄 ${doc.type}
+                        </h3>
+                        <span class="px-2 py-1 rounded text-xs ${mandatoryClass}">
+                            ${mandatoryText}
+                        </span>
+                    </div>
+                    
+                    ${doc.requirements.description ? `<p class="text-gray-600 text-sm mb-4">${doc.requirements.description}</p>` : ''}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <p class="font-medium mb-1">Formats</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${formats}
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-medium mb-1">Size</p>
+                            <div class="space-y-1">
+                                ${sizeDisplay}
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-medium mb-1">Dimensions</p>
+                            <div class="space-y-1">
+                                ${dimensionsDisplay}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(docDiv);
+            });
+
+            // Display raw JSON
+            document.getElementById('rawJson').textContent = JSON.stringify(schema, null, 2);
+
+            // Show results
+            document.getElementById('resultsDiv').classList.remove('hidden');
+            document.getElementById('instructionsDiv').classList.add('hidden');
+        }
+
+        function downloadSchema() {
+            if (!currentSchema) return;
+            
+            const dataStr = JSON.stringify(currentSchema, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${currentSchema.exam.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_schema.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function extractSchema() {
+            const url = document.getElementById('urlInput').value.trim();
+            
+            if (!url) {
+                showError('Please enter a valid URL');
+                return;
+            }
+
+            hideError();
+            showLoading();
+
+            // Simulate API call with mock data
+            setTimeout(() => {
+                const mockSchema = {
+                    "exam": "IBPS Clerk 2025 (Demo)",
+                    "source": url,
+                    "extractedAt": new Date().toISOString(),
+                    "documents": [
+                        {
+                            "type": "Photo",
+                            "requirements": {
+                                "format": ["jpg", "jpeg"],
+                                "maxSize": "50 KB",
+                                "minSize": "20 KB",
+                                "dimensions": {
+                                    "width": 200,
+                                    "height": 230,
+                                    "ratio": "200:230"
+                                },
+                                "mandatory": true,
+                                "description": "Recent passport size color photograph with light colored background"
+                            }
+                        },
+                        {
+                            "type": "Signature",
+                            "requirements": {
+                                "format": ["jpg", "jpeg"],
+                                "maxSize": "40 KB",
+                                "dimensions": {
+                                    "width": 140,
+                                    "height": 60,
+                                    "ratio": "140:60"
+                                },
+                                "mandatory": true,
+                                "description": "Clear signature in black ink on white paper"
+                            }
+                        },
+                        {
+                            "type": "Thumb Impression",
+                            "requirements": {
+                                "format": ["jpg", "jpeg"],
+                                "maxSize": "40 KB",
+                                "mandatory": true,
+                                "description": "Left thumb impression, clear and complete"
+                            }
+                        },
+                        {
+                            "type": "Marksheet",
+                            "requirements": {
+                                "format": ["pdf"],
+                                "maxSize": "500 KB",
+                                "mandatory": true,
+                                "description": "Educational qualification marksheets/certificates"
+                            }
+                        },
+                        {
+                            "type": "Caste Certificate",
+                            "requirements": {
+                                "format": ["pdf"],
+                                "maxSize": "300 KB",
+                                "mandatory": false,
+                                "description": "Caste certificate issued by competent authority (if applicable)"
+                            }
+                        }
+                    ],
+                    "metadata": {
+                        "url": url,
+                        "contentType": "text/html",
+                        "extractionMethod": "demo",
+                        "confidence": 0.92
+                    }
+                };
+
+                hideLoading();
+                displaySchema(mockSchema);
+            }, 2000); // Simulate 2 second processing time
+        }
+
+        // Allow Enter key to trigger extraction
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                extractSchema();
+            }
+        });
+    </script>
+</body>
+</html>

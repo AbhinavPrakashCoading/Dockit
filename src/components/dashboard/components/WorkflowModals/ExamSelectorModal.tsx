@@ -30,6 +30,18 @@ const ExamSelectorModal: React.FC<ExamSelectorModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  // Debug logging
+  console.log('🎯 ExamSelectorModal rendering...');
+  console.log('📊 Exams count:', exams.length);
+  console.log('⭐ Popular exams count:', popularExams.length);
+  console.log('🔍 Filtered exams count:', filteredExams.length);
+  console.log('⏳ Loading:', examsLoading);
+  console.log('🔧 onExamSelect function:', typeof onExamSelect);
+  
+  if (exams.length > 0) {
+    console.log('📋 First exam:', exams[0]);
+  }
+
   return (
     <div className="fixed inset-0 backdrop-blur-lg flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -58,14 +70,6 @@ const ExamSelectorModal: React.FC<ExamSelectorModalProps> = ({
                 autoComplete="off"
               />
             </div>
-            <button
-              disabled
-              className="px-4 py-3 bg-gray-100 text-gray-400 border border-gray-300 rounded-lg cursor-not-allowed transition-colors flex items-center gap-2 whitespace-nowrap"
-              title="Request Schema (Coming Soon)"
-            >
-              <Plus size={16} />
-              Request Schema
-            </button>
           </div>
         </div>
 
@@ -89,7 +93,11 @@ const ExamSelectorModal: React.FC<ExamSelectorModalProps> = ({
                   {popularExams.map(exam => (
                     <button
                       key={exam.id}
-                      onClick={() => onExamSelect(exam)}
+                      onClick={() => {
+                        console.log('🎯 Popular exam clicked:', exam.name);
+                        console.log('📋 Exam data:', exam);
+                        onExamSelect(exam);
+                      }}
                       className="p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition text-center"
                     >
                       <div className={`w-16 h-16 ${exam.color} rounded-full flex items-center justify-center mx-auto mb-2 relative`}>
@@ -146,7 +154,11 @@ const ExamSelectorModal: React.FC<ExamSelectorModalProps> = ({
                 {filteredExams.map(exam => (
                   <button
                     key={exam.id}
-                    onClick={() => onExamSelect(exam)}
+                    onClick={() => {
+                      console.log('🎯 Filtered exam clicked:', exam.name);
+                      console.log('📋 Exam data:', exam);
+                      onExamSelect(exam);
+                    }}
                     className="p-4 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition flex items-center gap-4"
                   >
                     <div className={`w-12 h-12 ${exam.color} rounded-lg flex items-center justify-center flex-shrink-0 relative`}>
