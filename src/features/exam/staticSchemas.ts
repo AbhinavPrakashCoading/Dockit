@@ -212,5 +212,110 @@ export const staticSchemas: Record<string, ExamSchema> = {
       avgConfidenceScore: 0.9,
       subjectiveRequirements: 2
     }
+  },
+  
+  // Example: Adding a new exam
+  'cat': {
+    examId: 'cat',
+    examName: 'Common Admission Test',
+    version: '2024.1.0',
+    lastUpdated: new Date('2024-01-15'),
+    requirements: [
+      {
+        id: 'photo',
+        type: 'Photo',
+        displayName: 'Recent Photograph',
+        description: 'Recent passport size photograph',
+        format: 'JPEG',
+        maxSizeKB: 100,
+        dimensions: '200x200',
+        aliases: ['passport photo', 'photograph', 'photo'],
+        category: 'photo',
+        mandatory: true,
+        subjective: [
+          {
+            field: 'photo',
+            requirement: 'Recent photograph with white background',
+            context: 'For identification during exam',
+            confidence: 0.9,
+            source: 'form',
+            priority: 'high'
+          }
+        ],
+        validationRules: [
+          {
+            type: 'strict',
+            rule: 'file_size_limit',
+            message: 'Photo file size must not exceed 100KB',
+            field: 'photo',
+            canOverride: false
+          }
+        ],
+        examples: ['Clear passport photo with white background'],
+        commonMistakes: ['Selfies', 'Blurry photos'],
+        helpText: 'Upload a recent passport-style photo'
+      },
+      {
+        id: 'signature',
+        type: 'Signature',
+        displayName: 'Digital Signature',
+        description: 'Scanned signature',
+        format: 'JPEG',
+        maxSizeKB: 50,
+        dimensions: '140x60',
+        aliases: ['sign', 'signature'],
+        category: 'signature',
+        mandatory: true,
+        subjective: [
+          {
+            field: 'signature',
+            requirement: 'Clear handwritten signature',
+            context: 'Must match signature on documents',
+            confidence: 0.85,
+            source: 'form',
+            priority: 'high'
+          }
+        ],
+        validationRules: [
+          {
+            type: 'strict',
+            rule: 'file_size_limit',
+            message: 'Signature file size must not exceed 50KB',
+            field: 'signature',
+            canOverride: false
+          }
+        ],
+        examples: ['Clear handwritten signature on white paper'],
+        commonMistakes: ['Printed signature', 'Unclear scan'],
+        helpText: 'Scan your handwritten signature clearly'
+      }
+    ],
+    generalGuidelines: [
+      'All documents must be clear and legible',
+      'Follow the specified format requirements',
+      'Ensure signature matches your ID documents'
+    ],
+    scrapingMetadata: {
+      sources: ['form', 'guidelines'],
+      confidence: 0.9,
+      lastScrapeAttempt: new Date('2024-01-15'),
+      scrapeSuccess: true,
+      errorCount: 0
+    },
+    configuration: {
+      examType: 'CAT',
+      baseUrl: 'https://iimcat.ac.in',
+      formUrls: ['https://iimcat.ac.in/application'],
+      faqUrls: ['https://iimcat.ac.in/faqs'],
+      guidelineUrls: ['https://iimcat.ac.in/guidelines'],
+      updateFrequency: 'yearly',
+      priority: 2
+    },
+    stats: {
+      totalDocuments: 2,
+      mandatoryDocuments: 2,
+      avgConfidenceScore: 0.87,
+      subjectiveRequirements: 2
+    }
   }
 };

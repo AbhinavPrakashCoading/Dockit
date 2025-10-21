@@ -12,10 +12,14 @@ import {
   Download,
   Settings,
   Shield,
-  Zap
+  Zap,
+  FileImage,
+  CreditCard,
+  Award
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { enhancedDocumentProcessingService } from '@/features/schema/EnhancedDocumentProcessingService';
+import { detectDocumentType, getDocumentConfig } from '@/features/processing/DocumentTypeProcessor';
 
 interface UploadedFile {
   id: string;
@@ -25,6 +29,8 @@ interface UploadedFile {
   file: File;
   status: 'uploading' | 'complete' | 'error';
   progress: number;
+  detectedDocumentType?: string;
+  documentConfig?: any;
 }
 
 interface Template {
@@ -104,15 +110,29 @@ export const EnhancedUploadSection: React.FC<EnhancedUploadSectionProps> = ({
   }, []);
 
   const handleFilesSelected = (files: File[]) => {
-    const newFiles: UploadedFile[] = files.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      file,
-      status: 'uploading',
-      progress: 0
-    }));
+    const newFiles: UploadedFile[] = files.map(file => {
+      // Detect document type automatically
+      const detectedType = detectDocumentType(file.name, file.size);
+      const config = getDocumentConfig(detectedType);
+      
+      // Show document type detection
+      toast(`📋 Detected: ${detectedType} (${config.category})`, { 
+        icon: '🔍',
+        duration: 3000 
+      });
+
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        file,
+        status: 'uploading',
+        progress: 0,
+        detectedDocumentType: detectedType,
+        documentConfig: config
+      };
+    });
 
     setUploadedFiles(prev => [...prev, ...newFiles]);
 
@@ -273,43 +293,90 @@ export const EnhancedUploadSection: React.FC<EnhancedUploadSectionProps> = ({
             </h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {uploadedFiles.map(file => (
-              <div key={file.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                <div className="flex items-center space-x-3 flex-1">
-                  <FileText className="w-8 h-8 text-blue-500" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatFileSize(file.size)} • {file.type}
-                    </p>
-                    {file.status === 'uploading' && (
-                      <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${file.progress}%` }}
-                        />
+            {uploadedFiles.map(file => {
+              // Get document type icon
+              const getDocumentIcon = (docType?: string) => {
+                if (!docType) return <FileText className="w-8 h-8 text-gray-500" />;
+                
+                switch (docType) {
+                  case 'passport_photo':
+                  case 'upsc_photo':
+                  case 'ssc_photo':
+                    return <FileImage className="w-8 h-8 text-purple-500" />;
+                  case 'aadhar_card':
+                  case 'pan_card':
+                    return <CreditCard className="w-8 h-8 text-blue-500" />;
+                  case 'marksheet':
+                  case 'certificate':
+                    return <Award className="w-8 h-8 text-green-500" />;
+                  case 'signature':
+                    return <FileText className="w-8 h-8 text-orange-500" />;
+                  default:
+                    return <FileText className="w-8 h-8 text-gray-500" />;
+                }
+              };
+
+              const getDocumentTypeColor = (category?: string) => {
+                switch (category) {
+                  case 'photo': return 'text-purple-600 bg-purple-50';
+                  case 'document': return 'text-blue-600 bg-blue-50';
+                  case 'certificate': return 'text-green-600 bg-green-50';
+                  case 'form': return 'text-orange-600 bg-orange-50';
+                  default: return 'text-gray-600 bg-gray-50';
+                }
+              };
+
+              return (
+                <div key={file.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                  <div className="flex items-center space-x-3 flex-1">
+                    {getDocumentIcon(file.detectedDocumentType)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {file.name}
+                      </p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <p className="text-xs text-gray-500">
+                          {formatFileSize(file.size)} • {file.type}
+                        </p>
+                        {file.detectedDocumentType && (
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDocumentTypeColor(file.documentConfig?.category)}`}>
+                            📋 {file.detectedDocumentType}
+                          </span>
+                        )}
                       </div>
+                      {file.status === 'uploading' && (
+                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${file.progress}%` }}
+                          />
+                        </div>
+                      )}
+                      {file.documentConfig && file.status === 'complete' && (
+                        <div className="mt-1 text-xs text-gray-600">
+                          <span className="font-medium">Processing:</span> {file.documentConfig.category} • 
+                          {file.documentConfig.requirements.compressionLevel || 'standard'} compression
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {file.status === 'complete' && (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
                     )}
+                    {file.status === 'error' && (
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                    )}
+                    <button
+                      onClick={() => removeFile(file.id)}
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {file.status === 'complete' && (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  )}
-                  {file.status === 'error' && (
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                  )}
-                  <button
-                    onClick={() => removeFile(file.id)}
-                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

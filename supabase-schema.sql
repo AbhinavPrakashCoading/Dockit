@@ -1,4 +1,4 @@
--- Supabase Database Schema for Document Manager
+-- Supabase Database Schema for Dockit
 -- Run this SQL in your Supabase project to set up the required tables
 
 -- Enable Row Level Security

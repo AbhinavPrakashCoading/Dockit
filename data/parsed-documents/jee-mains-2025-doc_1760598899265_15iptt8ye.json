@@ -1,0 +1,186 @@
+{
+  "id": "doc_1760598899265_15iptt8ye",
+  "examName": "JEE Mains 2025",
+  "examType": "jee",
+  "source": "text-input",
+  "parsedJson": {
+    "exam": "JEE Mains 2025",
+    "source": "text-input",
+    "extractedAt": "2025-10-16T07:14:07.027Z",
+    "documents": [
+      {
+        "type": "Photo",
+        "requirements": {
+          "format": [
+            "JPG"
+          ],
+          "minSize": "10 KB",
+          "maxSize": "200 KB",
+          "mandatory": true,
+          "description": "JPEG/ format 10KB–200KB recent passport size photo mandatory"
+        }
+      },
+      {
+        "type": "Signature",
+        "requirements": {
+          "format": [
+            "JPG"
+          ],
+          "minSize": "4 KB",
+          "maxSize": "30 KB",
+          "mandatory": true,
+          "description": "JPEG/ format 4KB–30KB mandatory"
+        }
+      },
+      {
+        "type": "ID Proof Aadhaar/Passport/Driving License/Voter ID/PAN Card",
+        "requirements": {
+          "format": [
+            "PDF"
+          ],
+          "minSize": "50 KB",
+          "maxSize": "300 KB",
+          "mandatory": true,
+          "description": "format 50KB–300KB mandatory"
+        }
+      },
+      {
+        "type": "Class 10th Marksheet/Pass Certificate",
+        "requirements": {
+          "format": [
+            "PDF"
+          ],
+          "minSize": "50 KB",
+          "maxSize": "300 KB",
+          "mandatory": true,
+          "description": "format 50KB–300KB mandatory"
+        }
+      },
+      {
+        "type": "Class 12th Marksheet/Admit Card/Certificate",
+        "requirements": {
+          "format": [
+            "PDF"
+          ],
+          "minSize": "50 KB",
+          "maxSize": "300 KB",
+          "mandatory": true,
+          "description": "format 50KB–300KB mandatory"
+        }
+      },
+      {
+        "type": "Category Certificate",
+        "requirements": {
+          "format": [
+            "PDF"
+          ],
+          "minSize": "50 KB",
+          "maxSize": "300 KB",
+          "mandatory": false,
+          "description": "format 50KB–300KB SC/ST/OBC/EWS certificate only if applicable",
+          "allowMultiple": true,
+          "maxFiles": 10,
+          "minFiles": 1,
+          "subcategories": [
+            {
+              "id": "graduation_degree",
+              "label": "Graduation Degree Certificate",
+              "required": true,
+              "description": "Final degree certificate from university"
+            },
+            {
+              "id": "graduation_marksheet",
+              "label": "Graduation Mark Sheet",
+              "required": true,
+              "description": "All semester/year mark sheets"
+            },
+            {
+              "id": "intermediate_certificate",
+              "label": "12th/Intermediate Certificate",
+              "required": true,
+              "description": "Higher secondary school certificate"
+            },
+            {
+              "id": "matriculation_certificate",
+              "label": "10th/Matriculation Certificate",
+              "required": true,
+              "description": "Secondary school certificate"
+            },
+            {
+              "id": "postgraduate_degree",
+              "label": "Post Graduate Degree (if applicable)",
+              "required": false,
+              "description": "Masters or higher degree certificates"
+            },
+            {
+              "id": "professional_certificate",
+              "label": "Professional Certificates (if any)",
+              "required": false,
+              "description": "CA, CS, CMA or other professional qualifications"
+            }
+          ]
+        }
+      },
+      {
+        "type": "PwD Certificate",
+        "requirements": {
+          "format": [
+            "PDF"
+          ],
+          "minSize": "50 KB",
+          "maxSize": "300 KB",
+          "mandatory": false,
+          "description": "format 50KB–300KB for differently abled candidates only if applicable",
+          "allowMultiple": false,
+          "subcategories": [
+            {
+              "id": "aadhaar_card",
+              "label": "Aadhaar Card",
+              "required": false,
+              "description": "Government issued Aadhaar identity card"
+            },
+            {
+              "id": "pan_card",
+              "label": "PAN Card",
+              "required": false,
+              "description": "Permanent Account Number card"
+            },
+            {
+              "id": "passport",
+              "label": "Passport",
+              "required": false,
+              "description": "Indian passport (any pages with photo and details)"
+            },
+            {
+              "id": "driving_license",
+              "label": "Driving License",
+              "required": false,
+              "description": "Valid driving license issued by RTO"
+            },
+            {
+              "id": "voter_id",
+              "label": "Voter ID Card",
+              "required": false,
+              "description": "Election Commission issued voter identity card"
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "method": "text-parser",
+      "confidence": 1
+    }
+  },
+  "originalText": "JEE Mains 2025\n\nDocuments Required:\nPhoto: JPEG/JPG format, 10KB–200KB, recent passport-size photo, mandatory\nSignature: JPEG/JPG format, 4KB–30KB, mandatory\nID Proof: PDF format, 50KB–300KB, mandatory\nClass 10th Marksheet/Pass Certificate: PDF format, 50KB–300KB, mandatory\nClass 12th Marksheet/Admit Card/Certificate: PDF format, 50KB–300KB, mandatory\nCategory Certificate (if applicable): PDF format, 50KB–300KB, SC/ST/OBC/EWS certificate, only if applicable\nPwD Certificate (if applicable): PDF format, 50KB–300KB, for differently-abled candidates, only if applicable",
+  "confidence": 1,
+  "documentCount": 7,
+  "method": "text-parser",
+  "userId": null,
+  "createdAt": "2025-10-16T07:14:59.265Z",
+  "updatedAt": "2025-10-16T07:14:59.268Z",
+  "extractedAt": "2025-10-16T07:14:59.265Z",
+  "accessCount": 0,
+  "lastAccessed": null,
+  "filename": "jee-mains-2025-doc_1760598899265_15iptt8ye.json"
+}

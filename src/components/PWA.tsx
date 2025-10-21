@@ -262,7 +262,7 @@ export function PWAInstallPrompt() {
       <div className="flex items-start gap-3">
         <div className="text-2xl">📱</div>
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">Install Document Manager</h3>
+          <h3 className="font-semibold text-gray-900">Install Dockit</h3>
           <p className="text-sm text-gray-600 mt-1">
             Get the full offline experience with background document processing
           </p>

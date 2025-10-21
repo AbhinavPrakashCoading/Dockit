@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Comprehensive Transformation Pipeline Audit</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 5px; }
+        .success { background: #e8f5e8; border-color: #4CAF50; }
+        .warning { background: #fff3cd; border-color: #FFC107; }
+        .error { background: #fde8e8; border-color: #f44336; }
+        .info { background: #e8f4fd; border-color: #2196F3; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; font-size: 12px; border-radius: 3px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; background: #4CAF50; color: white; }
+        button:hover { background: #45a049; }
+        .download-link { display: inline-block; padding: 8px 12px; background: #2196F3; color: white; text-decoration: none; margin: 5px; border-radius: 4px; font-size: 12px; }
+        .download-link:hover { background: #1976D2; }
+        canvas { border: 1px solid #ccc; margin: 5px; }
+        .test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .test-item { border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
+        .stats { font-size: 12px; color: #666; margin: 5px 0; }
+        .operation-header { background: #f0f0f0; padding: 8px; margin: 10px 0; border-radius: 3px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Comprehensive Transformation Pipeline Audit</h1>
+    <p>Testing all transformation operations for quality consistency...</p>
+    
+    <div class="test-section info">
+        <h3>📋 Test Plan</h3>
+        <ul>
+            <li><strong>Image Resizing:</strong> Aspect ratio preservation, quality settings</li>
+            <li><strong>Format Conversion:</strong> Image-to-image with quality validation</li>
+            <li><strong>PDF Conversion:</strong> Image-to-PDF with proper scaling</li>
+            <li><strong>Compression:</strong> Smart compression targeting</li>
+            <li><strong>Combined Operations:</strong> Multi-step transformations</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h3>🎨 Test Document Creation</h3>
+        <button onclick="createTestDocuments()">📸 Create Test Documents</button>
+        <div id="testDocuments"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🧪 Transformation Tests</h3>
+        <button onclick="runAllTransformationTests()">🚀 Run All Transformation Tests</button>
+        <div id="transformationResults"></div>
+    </div>
+
+    <script>
+        console.log('🔍 Starting Comprehensive Transformation Pipeline Audit...');
+
+        const testConfigs = [
+            {
+                name: 'high-res-document',
+                description: 'High Resolution Document (A4 scan)',
+                width: 2480,  // 300 DPI A4 width
+                height: 3508, // 300 DPI A4 height
+                color: '#FFFFFF',
+                textColor: '#000000',
+                type: 'document'
+            },
+            {
+                name: 'aadhar-card-realistic',
+                description: 'Realistic Aadhar Card Dimensions',
+                width: 856,
+                height: 540,
+                color: '#E3F2FD',
+                textColor: '#1565C0',
+                type: 'id-card'
+            },
+            {
+                name: 'passport-photo-standard',
+                description: 'Standard Passport Photo',
+                width: 600,
+                height: 800,
+                color: '#F5F5F5',
+                textColor: '#333333',
+                type: 'photo'
+            },
+            {
+                name: 'certificate-landscape',
+                description: 'Wide Certificate/Marksheet',
+                width: 1600,
+                height: 1200,
+                color: '#FFF8E1',
+                textColor: '#E65100',
+                type: 'certificate'
+            }
+        ];
+
+        let testDocuments = {};
+
+        function createDetailedTestImage(config) {
+            const canvas = document.createElement('canvas');
+            canvas.width = config.width;
+            canvas.height = config.height;
+            
+            const ctx = canvas.getContext('2d', {
+                alpha: true,
+                willReadFrequently: true
+            });
+            
+            // Use high quality settings
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            // Background
+            ctx.fillStyle = config.color;
+            ctx.fillRect(0, 0, config.width, config.height);
+            
+            // Border
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(2, 2, config.width - 4, config.height - 4);
+            
+            // Title
+            ctx.fillStyle = config.textColor;
+            ctx.font = `${Math.max(24, Math.min(config.width / 25, 48))}px Arial Black`;
+            ctx.textAlign = 'center';
+            ctx.fillText(config.description.toUpperCase(), config.width / 2, config.height * 0.2);
+            
+            // Dimensions info
+            ctx.font = `${Math.max(16, Math.min(config.width / 35, 32))}px Arial`;
+            ctx.fillText(`${config.width} × ${config.height}`, config.width / 2, config.height * 0.35);
+            
+            // Type info
+            ctx.font = `${Math.max(14, Math.min(config.width / 40, 28))}px Arial`;
+            ctx.fillText(`Type: ${config.type}`, config.width / 2, config.height * 0.45);
+            
+            // Quality test pattern (grid)
+            ctx.strokeStyle = config.textColor;
+            ctx.lineWidth = 1;
+            const gridSize = Math.max(20, Math.min(config.width / 50, 40));
+            for (let x = gridSize; x < config.width - gridSize; x += gridSize) {
+                for (let y = config.height * 0.6; y < config.height - gridSize; y += gridSize) {
+                    ctx.strokeRect(x, y, gridSize * 0.8, gridSize * 0.8);
+                }
+            }
+            
+            // Corner markers for cropping detection
+            const markerSize = Math.max(15, Math.min(config.width / 60, 30));
+            ctx.fillStyle = '#FF0000';
+            
+            // Four corners
+            ctx.fillRect(5, 5, markerSize, markerSize);
+            ctx.fillRect(config.width - markerSize - 5, 5, markerSize, markerSize);
+            ctx.fillRect(5, config.height - markerSize - 5, markerSize, markerSize);
+            ctx.fillRect(config.width - markerSize - 5, config.height - markerSize - 5, markerSize, markerSize);
+            
+            // White circles in corner markers
+            ctx.fillStyle = '#FFFFFF';
+            const circleRadius = markerSize / 4;
+            [[5 + markerSize/2, 5 + markerSize/2],
+             [config.width - markerSize/2 - 5, 5 + markerSize/2],
+             [5 + markerSize/2, config.height - markerSize/2 - 5],
+             [config.width - markerSize/2 - 5, config.height - markerSize/2 - 5]].forEach(([x, y]) => {
+                ctx.beginPath();
+                ctx.arc(x, y, circleRadius, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            return canvas;
+        }
+
+        function createTestDocuments() {
+            const container = document.getElementById('testDocuments');
+            container.innerHTML = '';
+            
+            testConfigs.forEach(config => {
+                const canvas = createDetailedTestImage(config);
+                
+                // Scale down for display
+                canvas.style.maxWidth = '250px';
+                canvas.style.maxHeight = '200px';
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'test-item';
+                wrapper.innerHTML = `
+                    <h4>${config.description}</h4>
+                    <div class="stats">
+                        Original: ${config.width}×${config.height}<br>
+                        Size: ~${Math.round((config.width * config.height * 4) / 1024)}KB uncompressed<br>
+                        Type: ${config.type}
+                    </div>
+                `;
+                wrapper.appendChild(canvas);
+                
+                container.appendChild(wrapper);
+                
+                // Store for testing
+                testDocuments[config.name] = { canvas, config };
+            });
+        }
+
+        async function testOperation(name, operation, file, ...args) {
+            console.log(`🧪 Testing: ${name} on ${file.name}`);
+            const startTime = performance.now();
+            
+            try {
+                const result = await operation(file, ...args);
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                
+                const sizeChange = ((result.size / file.size) * 100).toFixed(1);
+                
+                console.log(`✅ ${name} completed in ${duration}ms`);
+                console.log(`   📊 Size: ${Math.round(file.size / 1024)}KB → ${Math.round(result.size / 1024)}KB (${sizeChange}%)`);
+                
+                return {
+                    success: true,
+                    result,
+                    duration,
+                    sizeChange,
+                    originalSize: file.size,
+                    finalSize: result.size
+                };
+            } catch (error) {
+                console.error(`❌ ${name} failed:`, error);
+                return {
+                    success: false,
+                    error: error.message,
+                    duration: performance.now() - startTime
+                };
+            }
+        }
+
+        async function runAllTransformationTests() {
+            const resultsContainer = document.getElementById('transformationResults');
+            resultsContainer.innerHTML = '<p>🔄 Running comprehensive transformation tests...</p>';
+            
+            for (const [docName, { canvas, config }] of Object.entries(testDocuments)) {
+                console.log(`\n🏗️ Testing document: ${config.description}`);
+                
+                // Create base file
+                const blob = await new Promise(resolve => {
+                    canvas.toBlob(resolve, 'image/jpeg', 0.95);
+                });
+                const baseFile = new File([blob], `${docName}.jpg`, { type: 'image/jpeg' });
+                
+                console.log(`📁 Base file: ${baseFile.name} (${Math.round(baseFile.size / 1024)}KB)`);
+                
+                const documentResults = document.createElement('div');
+                documentResults.className = 'test-section';
+                documentResults.innerHTML = `<h4>📄 ${config.description}</h4>`;
+                
+                // Test 1: Image Resizing
+                const resizeResult = await testOperation(
+                    'Image Resize (50%)',
+                    (await import('./src/features/transform/utils/resizeImage.js')).resizeImage,
+                    baseFile,
+                    { width: Math.round(config.width * 0.5), height: Math.round(config.height * 0.5) }
+                );
+                
+                // Test 2: Format Conversion (JPEG to PNG)
+                const formatResult = await testOperation(
+                    'Format Conversion (JPEG→PNG)',
+                    (await import('./src/features/transform/utils/convertFormat.js')).convertFormat,
+                    baseFile,
+                    'image/png'
+                );
+                
+                // Test 3: PDF Conversion
+                const pdfResult = await testOperation(
+                    'PDF Conversion',
+                    (await import('./src/features/transform/utils/imageToPDFConverter.js')).convertFormatEnhanced,
+                    baseFile,
+                    'application/pdf'
+                );
+                
+                // Test 4: Compression (50% size target)
+                const targetSizeKB = Math.round((baseFile.size / 1024) * 0.5);
+                const compressResult = await testOperation(
+                    `Compression (→${targetSizeKB}KB)`,
+                    (await import('./src/features/transform/utils/compressImage.js')).compressImage,
+                    baseFile,
+                    targetSizeKB
+                );
+                
+                // Display results
+                const operations = [
+                    { name: 'Resize (50%)', result: resizeResult },
+                    { name: 'Format (JPEG→PNG)', result: formatResult },
+                    { name: 'PDF Conversion', result: pdfResult },
+                    { name: 'Compression', result: compressResult }
+                ];
+                
+                operations.forEach(({ name, result }) => {
+                    const opDiv = document.createElement('div');
+                    opDiv.className = result.success ? 'success' : 'error';
+                    
+                    if (result.success) {
+                        opDiv.innerHTML = `
+                            <div class="operation-header">✅ ${name}</div>
+                            <div class="stats">
+                                Duration: ${result.duration}ms<br>
+                                Size: ${Math.round(result.originalSize / 1024)}KB → ${Math.round(result.finalSize / 1024)}KB (${result.sizeChange}%)<br>
+                            </div>
+                        `;
+                        
+                        // Add download link
+                        if (result.result) {
+                            const url = URL.createObjectURL(result.result);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = result.result.name;
+                            link.className = 'download-link';
+                            link.textContent = `📥 Download ${result.result.name}`;
+                            opDiv.appendChild(link);
+                        }
+                    } else {
+                        opDiv.innerHTML = `
+                            <div class="operation-header">❌ ${name}</div>
+                            <div class="stats">Error: ${result.error}</div>
+                        `;
+                    }
+                    
+                    documentResults.appendChild(opDiv);
+                });
+                
+                resultsContainer.appendChild(documentResults);
+            }
+            
+            console.log('🎉 Comprehensive transformation audit completed!');
+        }
+
+        // Auto-create test documents on load
+        window.onload = function() {
+            createTestDocuments();
+        };
+    </script>
+</body>
+</html>

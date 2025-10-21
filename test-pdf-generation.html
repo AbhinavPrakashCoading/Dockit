@@ -1,0 +1,89 @@
+// Test for PDF generation debugging
+console.log('🧪 PDF Generation Test Starting...');
+
+// Import the PDF converter
+import { convertFormatEnhanced } from './src/features/transform/utils/imageToPDFConverter.js';
+
+async function testPDFGeneration() {
+  try {
+    // Create a test image
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 300;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Cannot get canvas context');
+    
+    // Draw a test pattern
+    ctx.fillStyle = '#4CAF50';
+    ctx.fillRect(0, 0, 400, 300);
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('TEST IMAGE', 200, 150);
+    ctx.fillText('FOR PDF CONVERSION', 200, 180);
+    
+    // Convert canvas to blob
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create test image blob'));
+          return;
+        }
+        resolve(blob);
+      }, 'image/jpeg', 0.9);
+    });
+    
+    // Create test file
+    const testFile = new File([blob], 'test-image.jpg', {
+      type: 'image/jpeg',
+      lastModified: Date.now()
+    });
+    
+    console.log(`📁 Created test file: ${testFile.name} (${Math.round(testFile.size / 1024)}KB, ${testFile.type})`);
+    
+    // Convert to PDF
+    console.log('\n🔄 Converting to PDF...');
+    const pdfFile = await convertFormatEnhanced(testFile, 'application/pdf');
+    
+    console.log(`✅ PDF conversion successful!`);
+    console.log(`📄 Result: ${pdfFile.name} (${Math.round(pdfFile.size / 1024)}KB, ${pdfFile.type})`);
+    
+    // Create download link to test the PDF
+    const url = URL.createObjectURL(pdfFile);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = pdfFile.name;
+    link.textContent = `Download ${pdfFile.name}`;
+    link.style.cssText = 'display: block; margin: 20px; padding: 10px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px;';
+    
+    document.body.appendChild(link);
+    
+    console.log('🎉 Test completed successfully! Click the download link to verify the PDF.');
+    
+  } catch (error) {
+    console.error('❌ PDF generation test failed:', error);
+    
+    // Display error on page
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'margin: 20px; padding: 10px; background: #f44336; color: white; border-radius: 4px;';
+    errorDiv.textContent = `PDF Generation Test Failed: ${error.message}`;
+    document.body.appendChild(errorDiv);
+  }
+}
+
+// Add some UI
+document.body.innerHTML = `
+  <h1>🧪 PDF Generation Test</h1>
+  <p>Testing the PDF conversion functionality...</p>
+  <div id="status">Running test...</div>
+`;
+
+// Run the test
+testPDFGeneration().then(() => {
+  document.getElementById('status').textContent = 'Test completed - check console for details';
+}).catch((error) => {
+  document.getElementById('status').textContent = 'Test failed - check console for details';
+  console.error('Test runner error:', error);
+});

@@ -1,0 +1,188 @@
+{
+  "examId": "ibps-clerk-2025",
+  "examName": "IBPS Clerk",
+  "version": "1.0.0-discovered",
+  "lastUpdated": "2025-10-09T22:54:25.744Z",
+  "category": "government",
+  "requirements": [
+    {
+      "id": "photo",
+      "displayName": "Recent Photograph",
+      "description": "Recent passport-size photograph for IBPS Clerk application",
+      "type": "Photo",
+      "format": "JPEG/JPG",
+      "maxSizeKB": 100,
+      "dimensions": "3.5cm x 4.5cm",
+      "mandatory": true,
+      "category": "photo",
+      "specifications": {
+        "background": "White or light colored background",
+        "quality": "Clear, professional quality",
+        "age": "Taken within last 6 months",
+        "attire": "Formal attire preferred"
+      }
+    },
+    {
+      "id": "signature",
+      "displayName": "Digital Signature",
+      "description": "Scanned handwritten signature for verification",
+      "type": "Signature",
+      "format": "JPEG/JPG",
+      "maxSizeKB": 50,
+      "dimensions": "3cm x 1cm",
+      "mandatory": true,
+      "category": "signature",
+      "specifications": {
+        "background": "White background only",
+        "ink": "Black or blue ink",
+        "clarity": "Clear and legible",
+        "style": "Same as on documents"
+      }
+    },
+    {
+      "id": "left-thumb-impression",
+      "displayName": "Left Thumb Impression",
+      "description": "Clear left thumb impression on white paper with black or blue ink",
+      "type": "Biometric",
+      "format": "JPEG/JPG",
+      "maxSizeKB": 50,
+      "dimensions": "240 x 240 pixels",
+      "mandatory": true,
+      "category": "biometric",
+      "specifications": {
+        "background": "White paper background",
+        "ink": "Black or blue ink",
+        "clarity": "Clear impression without smudging",
+        "orientation": "Correct thumb orientation",
+        "quality": "High resolution scan",
+        "instructions": "Should be on white paper, clearly visible"
+      }
+    },
+    {
+      "id": "handwritten-declaration",
+      "displayName": "Handwritten Declaration",
+      "description": "Handwritten declaration in English only, clearly written on white paper with black ink",
+      "type": "Declaration",
+      "format": "JPEG/JPG",
+      "maxSizeKB": 100,
+      "dimensions": "800 x 400 pixels",
+      "mandatory": true,
+      "category": "declaration",
+      "specifications": {
+        "background": "White paper background",
+        "ink": "Black ink only",
+        "language": "English only",
+        "clarity": "Clearly written and legible",
+        "completeness": "Full declaration text required",
+        "instructions": "Should be written in English only"
+      }
+    },
+    {
+      "id": "educational-certificate",
+      "displayName": "10th Class Marksheet",
+      "description": "Class 10 marksheet or equivalent qualification certificate, should be clear and visible",
+      "type": "Educational Certificate",
+      "format": "PDF",
+      "maxSizeKB": 500,
+      "dimensions": "Page Size - A4",
+      "mandatory": true,
+      "category": "educational",
+      "specifications": {
+        "background": "Clear document scan",
+        "quality": "High resolution, readable text",
+        "authority": "Recognized board/institution",
+        "completeness": "Full certificate with marks clearly visible",
+        "validity": "Valid and authenticated",
+        "clarity": "Should be clear and visible"
+      }
+    },
+    {
+      "id": "category-certificate",
+      "displayName": "Caste/Category Certificate",
+      "description": "Valid category certificate (if claiming reservation)",
+      "type": "Category Certificate",
+      "format": "PDF",
+      "maxSizeKB": 2000,
+      "dimensions": "A4",
+      "mandatory": false,
+      "category": "certificate",
+      "specifications": {
+        "background": "Official document",
+        "quality": "Clear, readable text",
+        "age": "Valid and current",
+        "attire": "Not applicable",
+        "categories": [
+          "SC",
+          "ST",
+          "OBC",
+          "EWS",
+          "PWD"
+        ],
+        "authority": "District Magistrate/SDM/Tehsildar",
+        "validity": "Valid and not expired",
+        "format": "Latest prescribed format"
+      }
+    }
+  ],
+  "metadata": {
+    "discoveredFrom": "natural-language-query",
+    "originalQuery": "ibps clerk 2025",
+    "confidence": 0.9,
+    "sources": [
+      "https://www.ibps.in",
+      "https://ibps.in/CWE/clerk",
+      "https://www.ibps.in/recruitment-process"
+    ],
+    "processingDate": "2025-10-09T22:54:25.744Z",
+    "specifications": {
+      "fileFormats": {
+        "images": [
+          "JPEG",
+          "JPG",
+          "PNG"
+        ],
+        "documents": [
+          "PDF"
+        ],
+        "maxSize": {
+          "photo": "100KB",
+          "signature": "50KB",
+          "documents": "2MB"
+        }
+      },
+      "dimensions": {
+        "photo": "3.5cm x 4.5cm (passport size)",
+        "signature": "3cm x 1cm",
+        "documents": "A4 size scan"
+      },
+      "quality": {
+        "resolution": "Minimum 300 DPI",
+        "clarity": "Clear and legible text",
+        "orientation": "Correct orientation",
+        "completeness": "Full document visible"
+      }
+    },
+    "validationRules": [
+      {
+        "type": "file_size",
+        "message": "File size exceeds maximum limit",
+        "severity": "error"
+      },
+      {
+        "type": "file_format",
+        "message": "Invalid file format",
+        "severity": "error"
+      },
+      {
+        "type": "image_quality",
+        "message": "Image quality is too low",
+        "severity": "warning"
+      },
+      {
+        "type": "document_completeness",
+        "message": "Document appears incomplete",
+        "severity": "warning"
+      }
+    ]
+  }
+}

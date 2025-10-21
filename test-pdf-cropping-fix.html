@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Cropping Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 15px 0; padding: 15px; }
+        .success { background: #e8f5e8; }
+        .warning { background: #fff3cd; }
+        .error { background: #fde8e8; }
+        .info { background: #e8f4fd; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; font-size: 12px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .download-link { display: inline-block; padding: 10px; background: #4CAF50; color: white; text-decoration: none; margin: 5px; border-radius: 4px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        .canvas-container { display: flex; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <h1>🔧 PDF Cropping Fix Test</h1>
+    <p>Testing different document types and aspect ratios...</p>
+    
+    <div class="test-section">
+        <h3>Test Documents</h3>
+        <div class="canvas-container" id="canvasContainer"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Conversion Results</h3>
+        <button onclick="runAllTests()">🧪 Run All PDF Conversion Tests</button>
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        console.log('🧪 Starting PDF Cropping Fix Tests...');
+
+        const testDocuments = [
+            {
+                name: 'aadhar-card-sample.jpg',
+                type: 'ID Card',
+                width: 856,  // Typical Aadhar card ratio
+                height: 540,
+                color: '#FF6B6B',
+                textColor: '#FFFFFF'
+            },
+            {
+                name: 'marksheet-certificate.jpg', 
+                type: 'Certificate',
+                width: 1200, // Wide certificate
+                height: 850,
+                color: '#4ECDC4',
+                textColor: '#2C3E50'
+            },
+            {
+                name: 'passport-photo.jpg',
+                type: 'Photo',
+                width: 600,  // Square-ish passport photo
+                height: 800,
+                color: '#45B7D1',
+                textColor: '#FFFFFF'
+            },
+            {
+                name: 'license-document.jpg',
+                type: 'License',
+                width: 1000, // Landscape license
+                height: 630,
+                color: '#96CEB4',
+                textColor: '#2C3E50'
+            },
+            {
+                name: 'diploma-large.jpg',
+                type: 'Diploma', 
+                width: 1600, // Very wide diploma
+                height: 900,
+                color: '#FECA57',
+                textColor: '#2C3E50'
+            }
+        ];
+
+        function createTestDocument(doc) {
+            const canvas = document.createElement('canvas');
+            canvas.width = doc.width;
+            canvas.height = doc.height;
+            canvas.style.maxWidth = '200px';
+            canvas.style.maxHeight = '150px';
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Fill background
+            ctx.fillStyle = doc.color;
+            ctx.fillRect(0, 0, doc.width, doc.height);
+            
+            // Add border
+            ctx.strokeStyle = '#333333';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(4, 4, doc.width - 8, doc.height - 8);
+            
+            // Add title
+            ctx.fillStyle = doc.textColor;
+            ctx.font = `${Math.max(24, Math.min(doc.width / 20, 48))}px Arial Black`;
+            ctx.textAlign = 'center';
+            ctx.fillText(doc.type.toUpperCase(), doc.width / 2, doc.height * 0.3);
+            
+            // Add dimensions
+            ctx.font = `${Math.max(16, Math.min(doc.width / 30, 32))}px Arial`;
+            ctx.fillText(`${doc.width} x ${doc.height}`, doc.width / 2, doc.height * 0.5);
+            
+            // Add filename
+            ctx.font = `${Math.max(12, Math.min(doc.width / 40, 24))}px Arial`;
+            ctx.fillText(doc.name, doc.width / 2, doc.height * 0.7);
+            
+            // Add corner markers to detect cropping
+            ctx.fillStyle = '#FF0000';
+            const markerSize = Math.max(20, Math.min(doc.width / 40, 50));
+            // Top-left
+            ctx.fillRect(10, 10, markerSize, markerSize);
+            // Top-right
+            ctx.fillRect(doc.width - markerSize - 10, 10, markerSize, markerSize);
+            // Bottom-left
+            ctx.fillRect(10, doc.height - markerSize - 10, markerSize, markerSize);
+            // Bottom-right
+            ctx.fillRect(doc.width - markerSize - 10, doc.height - markerSize - 10, markerSize, markerSize);
+            
+            // Add white circles in corners to make cropping obvious
+            ctx.fillStyle = '#FFFFFF';
+            const circleRadius = markerSize / 3;
+            ctx.beginPath();
+            ctx.arc(10 + markerSize/2, 10 + markerSize/2, circleRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(doc.width - markerSize/2 - 10, 10 + markerSize/2, circleRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(10 + markerSize/2, doc.height - markerSize/2 - 10, circleRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(doc.width - markerSize/2 - 10, doc.height - markerSize/2 - 10, circleRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Add label
+            const label = document.createElement('div');
+            label.textContent = `${doc.type} (${doc.width}x${doc.height})`;
+            label.style.cssText = 'text-align: center; font-size: 12px; margin-top: 5px;';
+            
+            const container = document.createElement('div');
+            container.style.cssText = 'display: inline-block; margin: 10px; text-align: center;';
+            container.appendChild(canvas);
+            container.appendChild(label);
+            
+            document.getElementById('canvasContainer').appendChild(container);
+            
+            return canvas;
+        }
+
+        async function convertCanvasToPDF(canvas, filename) {
+            try {
+                // Convert canvas to blob
+                const blob = await new Promise((resolve, reject) => {
+                    canvas.toBlob(blob => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('Canvas toBlob failed'));
+                    }, 'image/jpeg', 0.95);
+                });
+                
+                // Create file
+                const file = new File([blob], filename, { type: 'image/jpeg' });
+                
+                console.log(`🔄 Converting ${filename} to PDF...`);
+                console.log(`   📐 Original: ${canvas.width}x${canvas.height}`);
+                console.log(`   📊 File size: ${Math.round(file.size / 1024)}KB`);
+                
+                // Import and use the PDF converter
+                const { convertFormatEnhanced } = await import('./src/features/transform/utils/imageToPDFConverter.js');
+                
+                const pdfFile = await convertFormatEnhanced(file, 'application/pdf');
+                
+                console.log(`✅ PDF created: ${pdfFile.name} (${Math.round(pdfFile.size / 1024)}KB)`);
+                
+                return pdfFile;
+                
+            } catch (error) {
+                console.error(`❌ PDF conversion failed for ${filename}:`, error);
+                throw error;
+            }
+        }
+
+        async function runAllTests() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<p>🔄 Running tests...</p>';
+            
+            try {
+                for (const doc of testDocuments) {
+                    const canvas = document.querySelector(`canvas[width="${doc.width}"][height="${doc.height}"]`);
+                    if (!canvas) {
+                        console.error(`❌ Canvas not found for ${doc.name}`);
+                        continue;
+                    }
+                    
+                    try {
+                        const pdfFile = await convertCanvasToPDF(canvas, doc.name);
+                        
+                        // Create download link
+                        const url = URL.createObjectURL(pdfFile);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = pdfFile.name;
+                        link.textContent = `📥 Download ${doc.type} PDF (${Math.round(pdfFile.size / 1024)}KB)`;
+                        link.className = 'download-link';
+                        
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = 'success';
+                        resultDiv.innerHTML = `
+                            <strong>✅ ${doc.type} (${doc.width}x${doc.height})</strong><br>
+                            Original: ${Math.round(canvas.toDataURL().length / 1024)}KB → PDF: ${Math.round(pdfFile.size / 1024)}KB<br>
+                        `;
+                        resultDiv.appendChild(link);
+                        
+                        resultsDiv.appendChild(resultDiv);
+                        
+                    } catch (error) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'error';
+                        errorDiv.innerHTML = `<strong>❌ ${doc.type}</strong><br>Error: ${error.message}`;
+                        resultsDiv.appendChild(errorDiv);
+                    }
+                }
+                
+                console.log('🎉 All tests completed!');
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Test suite failed: ${error.message}</div>`;
+                console.error('❌ Test suite failed:', error);
+            }
+        }
+
+        // Create test documents on page load
+        window.onload = function() {
+            testDocuments.forEach(doc => {
+                createTestDocument(doc);
+            });
+            
+            // Add instructions
+            const instructions = document.createElement('div');
+            instructions.className = 'info';
+            instructions.innerHTML = `
+                <h4>🔍 How to Test for Cropping:</h4>
+                <ul>
+                    <li><strong>Red squares</strong> in corners should be fully visible in PDFs</li>
+                    <li><strong>White circles</strong> inside red squares should not be cut off</li>
+                    <li><strong>Border lines</strong> should be complete around the edges</li>
+                    <li><strong>Text content</strong> should be fully readable</li>
+                    <li>Different document types should use appropriate margins</li>
+                </ul>
+            `;
+            document.body.insertBefore(instructions, document.body.firstChild.nextSibling);
+        };
+    </script>
+</body>
+</html>

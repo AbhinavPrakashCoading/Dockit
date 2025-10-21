@@ -15,16 +15,16 @@ export async function GET(request: NextRequest) {
     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     // }
 
-    // Return mock data for now
-    const mockStats = {
-      totalDocuments: 3,
-      storageUsed: 7.5, // MB (2.5 + 1.8 + 3.2)
+    // Return empty stats for guest users
+    const stats = {
+      totalDocuments: 0,
+      storageUsed: 0, // MB
       storageLimit: 1024, // MB
-      driveConnected: true,
-      processingCount: 1 // One document is processing
+      driveConnected: false, // Guest users don't have drive connected
+      processingCount: 0
     }
 
-    return NextResponse.json(mockStats)
+    return NextResponse.json(stats)
   } catch (error) {
     console.error('Error fetching storage stats:', error)
     return NextResponse.json(

@@ -15,59 +15,11 @@ export async function GET(request: NextRequest) {
     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     // }
 
-    // Return mock data for now to ensure the Dashboard works
-    const mockDocuments = [
-      {
-        id: '1',
-        name: 'Sample Document 1.pdf',
-        examType: 'IELTS',
-        status: 'validated' as const,
-        uploadDate: new Date().toISOString(),
-        size: '2.5 MB',
-        fileType: 'application/pdf',
-        validationScore: 95,
-        location: 'drive' as const,
-        thumbnail: undefined,
-        processingStage: undefined,
-        downloadUrl: undefined,
-        userId: 'guest-user', // Use guest user while auth is bypassed
-        isProcessing: false
-      },
-      {
-        id: '2',
-        name: 'Sample Document 2.docx',
-        examType: 'TOEFL',
-        status: 'processing' as const,
-        uploadDate: new Date().toISOString(),
-        size: '1.8 MB',
-        fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        validationScore: undefined,
-        location: 'local' as const,
-        thumbnail: undefined,
-        processingStage: 'analyzing',
-        downloadUrl: undefined,
-        userId: 'guest-user', // Use guest user while auth is bypassed
-        isProcessing: true
-      },
-      {
-        id: '3',
-        name: 'AWS RDS Test Document.pdf',
-        examType: 'SSC',
-        status: 'validated' as const,
-        uploadDate: new Date().toISOString(),
-        size: '3.2 MB',
-        fileType: 'application/pdf',
-        validationScore: 88,
-        location: 'drive' as const,
-        thumbnail: undefined,
-        processingStage: undefined,
-        downloadUrl: undefined,
-        userId: 'guest-user',
-        isProcessing: false
-      }
-    ]
+    // For now, return empty array since we don't have actual document storage implemented
+    // and we shouldn't show fake data to users
+    const documents: any[] = [];
 
-    return NextResponse.json(mockDocuments)
+    return NextResponse.json(documents)
   } catch (error) {
     console.error('Error fetching documents:', error)
     return NextResponse.json(

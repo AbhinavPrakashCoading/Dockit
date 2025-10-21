@@ -4,6 +4,19 @@
 import toast from 'react-hot-toast';
 import JSZip from 'jszip';
 import { hybridStorage } from '@/features/storage/HybridStorageService';
+import { 
+  documentAwareImageProcessor, 
+  ProcessingResult as ImageProcessingResult 
+} from '@/features/processing/DocumentAwareImageProcessor';
+import { 
+  detectDocumentType, 
+  getDocumentConfig,
+  validateDocumentRequirements 
+} from '@/features/processing/DocumentTypeProcessor';
+import { 
+  documentTypeVerifier,
+  DocumentVerificationResult
+} from '@/features/verification/DocumentTypeVerifier';
 
 // Dynamically import PDF.js only on client side
 let pdfjsLib: any = null;
@@ -33,6 +46,9 @@ export interface ProcessedFile {
   fileSize: number;
   optimizedSize?: number;
   processedBlob?: Blob;
+  documentType?: string;
+  processingMetadata?: any;
+  verificationResult?: DocumentVerificationResult;
 }
 
 export interface ValidationReport {
@@ -162,7 +178,26 @@ class EnhancedDocumentProcessingService {
     // Process each file with REAL processing
     for (const file of files) {
       try {
-        toast(`Processing ${file.name}...`, { icon: 'ℹ️' });
+        toast(`🔍 Analyzing ${file.name}...`, { icon: '🤖' });
+        
+        // Step 1: AI-powered document type verification (primary method)
+        toast(`🔍 Analyzing ${file.name}...`, { icon: '🤖' });
+        
+        // Get initial hint from filename, but don't rely on it heavily
+        const filenameHint = detectDocumentType(file.name, file.size);
+        
+        // AI verification is the primary detection method
+        const verificationResult = await documentTypeVerifier.verifyDocumentType(file, filenameHint);
+        
+        // Use AI result if confident, otherwise fallback to filename hint only if AI is very uncertain
+        const finalDocumentType = verificationResult.confidence > 0.4 
+          ? verificationResult.verifiedType 
+          : (verificationResult.confidence < 0.2 ? filenameHint : verificationResult.verifiedType);
+        
+        toast(`📋 Detected: ${finalDocumentType} (${Math.round(verificationResult.confidence * 100)}% confidence)`, { 
+          icon: verificationResult.confidence > 0.6 ? '✅' : verificationResult.confidence > 0.3 ? '⚠️' : '❓',
+          duration: 4000
+        });
         
         const validations = this.validateFile(file, template);
         let processedFile: ProcessedFile = {
@@ -171,15 +206,43 @@ class EnhancedDocumentProcessingService {
           status: validations.every(v => v.passed || v.severity !== 'error') ? 'processed' : 'failed',
           validations,
           transformations: [],
-          fileSize: file.size
+          fileSize: file.size,
+          documentType: finalDocumentType, // Use the final determined type
+          verificationResult: {
+            ...verificationResult,
+            verifiedType: finalDocumentType // Update the verification result too
+          }
         };
+
+        // Add verification info to transformations
+        processedFile.transformations.push(`🤖 AI Analysis Results:`);
+        processedFile.transformations.push(`   Final Type: ${finalDocumentType}`);
+        processedFile.transformations.push(`   AI Detected: ${verificationResult.verifiedType}`);
+        processedFile.transformations.push(`   Filename Hint: ${filenameHint}`);
+        processedFile.transformations.push(`   Confidence: ${Math.round(verificationResult.confidence * 100)}%`);
+        processedFile.transformations.push(`   Dimensions: ${verificationResult.dimensions.width}×${verificationResult.dimensions.height}`);
+        processedFile.transformations.push(`   Image Quality: ${Math.round(verificationResult.fileMetadata.quality)}%`);
+        
+        if (verificationResult.extractedData.text && verificationResult.extractedData.text.length > 0) {
+          processedFile.transformations.push(`   Text Lines Found: ${verificationResult.extractedData.text.length}`);
+          processedFile.extractedText = verificationResult.extractedData.text.join('\n');
+        }
+        
+        if (verificationResult.extractedData.detectedElements) {
+          processedFile.transformations.push(`   Visual Elements: ${verificationResult.extractedData.detectedElements.join(', ')}`);
+        }
+        
+        // Add verification reasons
+        verificationResult.reasons.forEach(reason => {
+          processedFile.transformations.push(`   • ${reason}`);
+        });
 
         // REAL PROCESSING based on file type
         if (file.type === 'application/pdf') {
           const pdfResult = await this.processPDF(file);
           processedFile = { ...processedFile, ...pdfResult };
         } else if (file.type.startsWith('image/')) {
-          const imageResult = await this.processImage(file);
+          const imageResult = await this.processImage(file, finalDocumentType);
           processedFile = { ...processedFile, ...imageResult };
         }
 
@@ -200,6 +263,17 @@ class EnhancedDocumentProcessingService {
               canFix: validation.severity !== 'error'
             });
           }
+        });
+        
+        // Add verification warnings as issues
+        verificationResult.warnings.forEach(warning => {
+          issues.push({
+            type: 'warning',
+            message: `AI Verification: ${warning}`,
+            file: file.name,
+            field: 'ai_verification',
+            canFix: true
+          });
         });
 
       } catch (error) {
@@ -270,9 +344,21 @@ class EnhancedDocumentProcessingService {
     };
 
     if (result.success) {
-      toast.success(`Successfully processed ${successfulFiles}/${files.length} files! Saved ${Math.round(totalSizeSaved/1024)}KB`);
+      const verifiedFiles = processedFiles.filter(f => f.verificationResult?.confidence && f.verificationResult.confidence > 0.7);
+      const lowConfidenceFiles = processedFiles.filter(f => f.verificationResult?.confidence && f.verificationResult.confidence <= 0.7);
+      
+      let message = `🤖 AI Processing Complete: ${successfulFiles}/${files.length} files processed!`;
+      if (verifiedFiles.length > 0) {
+        message += ` ${verifiedFiles.length} verified with high confidence.`;
+      }
+      if (lowConfidenceFiles.length > 0) {
+        message += ` ${lowConfidenceFiles.length} need manual review.`;
+      }
+      message += ` Saved ${Math.round(totalSizeSaved/1024)}KB total.`;
+      
+      toast.success(message, { duration: 6000 });
     } else {
-      toast.error(`Processing completed with ${errors.length} errors.`);
+      toast.error(`🚨 Processing completed with ${errors.length} errors. Check verification results.`);
     }
 
     return result;
@@ -326,60 +412,65 @@ class EnhancedDocumentProcessingService {
     }
   }
 
-  // REAL IMAGE PROCESSING using Canvas API
-  private async processImage(file: File): Promise<Partial<ProcessedFile>> {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-
-      img.onload = () => {
-        try {
-          // Optimize image size while maintaining quality
-          const maxWidth = 1920;
-          const maxHeight = 1080;
-          let { width, height } = img;
-
-          // Calculate new dimensions
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          // Draw and compress
-          ctx!.drawImage(img, 0, 0, width, height);
-          
-          canvas.toBlob((blob) => {
-            if (blob) {
-              resolve({
-                processedBlob: blob,
-                optimizedSize: blob.size,
-                transformations: [
-                  `Image resized to ${width}x${height}`,
-                  'Quality optimized',
-                  'Format standardized',
-                  `Size reduced by ${Math.round(((file.size - blob.size) / file.size) * 100)}%`
-                ]
-              });
-            } else {
-              reject(new Error('Failed to create optimized image blob'));
-            }
-          }, 'image/jpeg', 0.85); // 85% quality
-        } catch (error) {
-          reject(error);
-        }
+  // REAL IMAGE PROCESSING using Document-Aware Processor with AI Verification
+  private async processImage(file: File, verifiedType?: string): Promise<Partial<ProcessedFile>> {
+    try {
+      // Use verified type from AI analysis, or fallback to detection
+      const documentType = verifiedType || detectDocumentType(file.name, file.size);
+      const config = getDocumentConfig(documentType);
+      
+      toast(`🎯 Processing as ${documentType} (${config.category})`, { icon: '⚙️' });
+      
+      // Use document-aware processing with verified type
+      const processingResult: ImageProcessingResult = await documentAwareImageProcessor.processImage(
+        file, 
+        documentType,
+        true // Force the verified type
+      );
+      
+      if (!processingResult.success) {
+        throw new Error(`Document processing failed: ${processingResult.errors.join(', ')}`);
+      }
+      
+      const transformations = [
+        `📄 Document Processing Results:`,
+        `   Type: ${documentType} (${config.category})`,
+        `   Original: ${Math.round(processingResult.originalSize / 1024)}KB`,
+        `   Processed: ${Math.round(processingResult.processedSize / 1024)}KB`,
+        `   Saved: ${processingResult.compressionRatio}%`,
+        ...processingResult.transformations
+      ];
+      
+      // Add warnings if any
+      if (processingResult.warnings.length > 0) {
+        transformations.push('⚠️  Processing Warnings:');
+        transformations.push(...processingResult.warnings.map(w => `   • ${w}`));
+      }
+      
+      // Add metadata info
+      if (processingResult.metadata.originalDimensions && processingResult.metadata.processedDimensions) {
+        const orig = processingResult.metadata.originalDimensions;
+        const proc = processingResult.metadata.processedDimensions;
+        transformations.push(`   Dimensions: ${orig.width}×${orig.height} → ${proc.width}×${proc.height}`);
+      }
+      
+      if (processingResult.metadata.qualityUsed) {
+        transformations.push(`   Quality: ${Math.round(processingResult.metadata.qualityUsed * 100)}%`);
+      }
+      
+      transformations.push(`   Time: ${processingResult.metadata.processingTime}ms`);
+      
+      return {
+        processedBlob: processingResult.processedFile,
+        optimizedSize: processingResult.processedSize,
+        transformations,
+        documentType,
+        processingMetadata: processingResult.metadata
       };
-
-      img.onerror = () => reject(new Error('Failed to load image'));
-      img.src = URL.createObjectURL(file);
-    });
+      
+    } catch (error) {
+      throw new Error(`Image processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   // Create downloadable ZIP file
@@ -412,19 +503,55 @@ class EnhancedDocumentProcessingService {
   private validateFile(file: File, template: SimpleTemplate): FileValidation[] {
     const validations: FileValidation[] = [];
 
-    // Find matching requirement
+    // Auto-detect document type for more accurate validation
+    const detectedType = detectDocumentType(file.name, file.size);
+    const typeConfig = getDocumentConfig(detectedType);
+    
+    // Add document type detection info
+    validations.push({
+      rule: 'document_type_detected',
+      passed: true,
+      message: `Detected document type: ${detectedType} (${typeConfig.category})`,
+      severity: 'info'
+    });
+
+    // Find matching requirement in template
     const requirement = template.requirements.find(req => 
       file.name.toLowerCase().includes(req.type.toLowerCase().replace(' ', '_')) ||
-      req.type.toLowerCase().includes(file.name.toLowerCase().split('.')[0])
+      req.type.toLowerCase().includes(file.name.toLowerCase().split('.')[0]) ||
+      req.type.toLowerCase() === detectedType.toLowerCase()
     );
 
     if (!requirement) {
       validations.push({
         rule: 'document_type_match',
         passed: false,
-        message: `Document type not recognized for ${template.name} schema`,
+        message: `Document type not recognized for ${template.name} schema. Auto-detected: ${detectedType}`,
         severity: 'warning'
       });
+      
+      // Use document type validation instead
+      const documentValidation = validateDocumentRequirements(file, detectedType);
+      if (!documentValidation.valid) {
+        documentValidation.issues.forEach(issue => {
+          validations.push({
+            rule: 'document_type_validation',
+            passed: false,
+            message: issue,
+            severity: 'warning'
+          });
+        });
+      }
+      
+      documentValidation.recommendations.forEach(rec => {
+        validations.push({
+          rule: 'document_type_recommendation',
+          passed: true,
+          message: rec,
+          severity: 'info'
+        });
+      });
+      
       return validations;
     }
 
@@ -449,6 +576,17 @@ class EnhancedDocumentProcessingService {
         ? `File type (${fileExtension}) is allowed`
         : `File type (${fileExtension}) not allowed. Allowed: ${requirement.allowedTypes.join(', ')}`,
       severity: isValidType ? 'info' : 'error'
+    });
+
+    // Add document-specific validation recommendations
+    const docValidation = validateDocumentRequirements(file, detectedType);
+    docValidation.recommendations.forEach(rec => {
+      validations.push({
+        rule: 'document_specific_recommendation',
+        passed: true,
+        message: `📋 ${rec}`,
+        severity: 'info'
+      });
     });
 
     return validations;

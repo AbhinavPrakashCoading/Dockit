@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hover Effects Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-100">
+    <h1 class="text-2xl font-bold mb-6">FastOverview Hover Effects Test</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl">
+        <!-- Upload Documents Button -->
+        <button class="p-4 border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 hover:shadow-lg transition-all duration-300 text-left transform hover:scale-110 hover:-translate-y-1 bg-white">
+            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
+                📄
+            </div>
+            <h4 class="font-medium text-gray-900">Upload Documents</h4>
+            <p class="text-sm text-gray-600 mt-1">Start processing your documents</p>
+        </button>
+
+        <!-- View Documents Button -->
+        <button class="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg transition-all duration-300 text-left transform hover:scale-110 hover:-translate-y-1 bg-white">
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
+                ✅
+            </div>
+            <h4 class="font-medium text-gray-900">View Documents</h4>
+            <p class="text-sm text-gray-600 mt-1">Manage your document library</p>
+        </button>
+
+        <!-- View Analytics Button -->
+        <button class="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-400 hover:bg-orange-50 hover:shadow-lg transition-all duration-300 text-left transform hover:scale-110 hover:-translate-y-1 bg-white">
+            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
+                📊
+            </div>
+            <h4 class="font-medium text-gray-900">View Analytics</h4>
+            <p class="text-sm text-gray-600 mt-1">Track processing performance</p>
+        </button>
+    </div>
+
+    <div class="mt-8 p-4 bg-yellow-100 border border-yellow-400 rounded-lg">
+        <h2 class="font-semibold text-yellow-800">Expected Hover Effects:</h2>
+        <ul class="list-disc list-inside text-yellow-700 mt-2">
+            <li>🔍 <strong>Zoom:</strong> 10% scale increase (hover:scale-110)</li>
+            <li>⬆️ <strong>Lift:</strong> Slight upward movement (hover:-translate-y-1)</li>
+            <li>🎨 <strong>Border:</strong> Color-coded border highlight</li>
+            <li>🌟 <strong>Background:</strong> Subtle color tint (50-level opacity)</li>
+            <li>✨ <strong>Shadow:</strong> Enhanced elevation (hover:shadow-lg)</li>
+            <li>⚡ <strong>Smooth:</strong> 300ms transition animation</li>
+        </ul>
+    </div>
+</body>
+</html>

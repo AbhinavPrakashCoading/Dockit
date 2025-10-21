@@ -1,4 +1,4 @@
-# 📄 Document Manager MVP
+# 📄 Dockit
 
 A schema-aware document manager for exam workflows. Supports dynamic schema ingestion, real-time validation, and ZIP packaging.
 

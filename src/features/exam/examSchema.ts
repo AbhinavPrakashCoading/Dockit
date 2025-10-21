@@ -6,7 +6,7 @@ export interface SubjectiveRequirement {
   requirement: string;
   context: string;
   confidence: number;
-  source: 'form' | 'faq' | 'guidelines' | 'examples';
+  source: 'form' | 'faq' | 'guidelines' | 'examples' | 'official_notification' | 'nta_guidelines' | 'iim_guidelines' | 'ets_guidelines';
   conditions?: string[];
   priority: 'high' | 'medium' | 'low';
 }
@@ -32,6 +32,7 @@ export interface EnhancedDocumentRequirement extends DocumentRequirement {
   examples?: string[];
   commonMistakes?: string[];
   helpText?: string;
+  namingConvention?: string;
 }
 
 export interface ScrapingMetadata {
@@ -50,7 +51,7 @@ export interface ExamConfiguration {
   formUrls: string[];
   faqUrls: string[];
   guidelineUrls: string[];
-  updateFrequency: 'daily' | 'weekly' | 'monthly';
+  updateFrequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'bi-yearly' | 'yearly';
   priority: number;
 }
 

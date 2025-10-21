@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Generation Diagnostics</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 10px 0; padding: 15px; }
+        .success { background: #e8f5e8; }
+        .error { background: #fde8e8; }
+        .info { background: #e8f4fd; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; font-size: 12px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .download-link { display: inline-block; padding: 10px; background: #4CAF50; color: white; text-decoration: none; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 PDF Generation Diagnostics</h1>
+    
+    <div class="test-section">
+        <h3>Step 1: Canvas Test</h3>
+        <canvas id="testCanvas" width="200" height="150" style="border: 1px solid #ccc;"></canvas>
+        <div id="canvasResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Step 2: Image Data URL Test</h3>
+        <div id="imageDataResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Step 3: PDF Structure Test</h3>
+        <div id="pdfStructureResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Step 4: Full Conversion Test</h3>
+        <button onclick="runFullTest()">Run Full PDF Conversion Test</button>
+        <div id="fullTestResult"></div>
+    </div>
+
+    <script>
+        console.log('🧪 Starting PDF Generation Diagnostics...');
+
+        // Step 1: Test Canvas Generation
+        function testCanvas() {
+            const canvas = document.getElementById('testCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Draw test pattern
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('TEST CANVAS', 100, 75);
+            ctx.fillText('PDF DIAGNOSTIC', 100, 95);
+            
+            // Test data URL generation
+            const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+            
+            document.getElementById('canvasResult').innerHTML = `
+                <div class="success">
+                    ✅ Canvas created successfully<br>
+                    📊 Data URL length: ${dataURL.length} characters<br>
+                    🔗 Data URL prefix: ${dataURL.substring(0, 50)}...
+                </div>
+            `;
+            
+            return dataURL;
+        }
+
+        // Step 2: Test Image Data Processing
+        function testImageData(dataURL) {
+            try {
+                const base64Data = dataURL.split(',')[1];
+                const binaryData = atob(base64Data);
+                
+                console.log(`📊 Base64 length: ${base64Data.length}`);
+                console.log(`📊 Binary length: ${binaryData.length}`);
+                console.log(`🔢 First 20 binary bytes:`, Array.from(binaryData.slice(0, 20)).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join(' '));
+                
+                // Verify JPEG headers
+                const jpegHeader = binaryData.slice(0, 4);
+                const headerBytes = Array.from(jpegHeader).map(c => c.charCodeAt(0).toString(16).padStart(2, '0'));
+                
+                document.getElementById('imageDataResult').innerHTML = `
+                    <div class="success">
+                        ✅ Image data processed successfully<br>
+                        📊 Base64 data: ${base64Data.length} chars<br>
+                        📊 Binary data: ${binaryData.length} bytes<br>
+                        🔍 JPEG header: ${headerBytes.join(' ')} ${headerBytes[0] === 'ff' && headerBytes[1] === 'd8' ? '✅ Valid JPEG' : '❌ Invalid JPEG'}
+                    </div>
+                `;
+                
+                return { base64Data, binaryData };
+                
+            } catch (error) {
+                document.getElementById('imageDataResult').innerHTML = `
+                    <div class="error">❌ Image data processing failed: ${error.message}</div>
+                `;
+                return null;
+            }
+        }
+
+        // Step 3: Test PDF Structure Creation
+        function testPDFStructure(binaryData, width = 200, height = 150) {
+            try {
+                console.log('🏗️ Building PDF structure...');
+                
+                // Build PDF with detailed logging
+                const offsets = [];
+                let pdf = '%PDF-1.4\n';
+                console.log(`PDF header: "${pdf.trim()}"`);
+                
+                // Object 1: Catalog
+                offsets[1] = pdf.length;
+                const obj1 = `1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n\n`;
+                pdf += obj1;
+                console.log(`Object 1 at offset ${offsets[1]}: length ${obj1.length}`);
+                
+                // Object 2: Pages
+                offsets[2] = pdf.length;
+                const obj2 = `2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n\n`;
+                pdf += obj2;
+                console.log(`Object 2 at offset ${offsets[2]}: length ${obj2.length}`);
+                
+                // Object 3: Page
+                offsets[3] = pdf.length;
+                const obj3 = `3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 595.28 841.89]\n/Resources <<\n/XObject <<\n/Im1 4 0 R\n>>\n>>\n/Contents 5 0 R\n>>\nendobj\n\n`;
+                pdf += obj3;
+                console.log(`Object 3 at offset ${offsets[3]}: length ${obj3.length}`);
+                
+                // Object 4: Image
+                offsets[4] = pdf.length;
+                const imageLength = binaryData.length;
+                const obj4Start = `4 0 obj\n<<\n/Type /XObject\n/Subtype /Image\n/Width ${width}\n/Height ${height}\n/ColorSpace /DeviceRGB\n/BitsPerComponent 8\n/Filter /DCTDecode\n/Length ${imageLength}\n>>\nstream\n`;
+                const obj4End = `\nendstream\nendobj\n\n`;
+                const obj4 = obj4Start + binaryData + obj4End;
+                pdf += obj4;
+                console.log(`Object 4 at offset ${offsets[4]}: image length ${imageLength}, total obj length ${obj4.length}`);
+                
+                // Object 5: Content stream  
+                offsets[5] = pdf.length;
+                // Center image on page
+                const x = (595.28 - width) / 2;
+                const y = (841.89 - height) / 2;
+                const contentStream = `q\n${width} 0 0 ${height} ${x} ${y} cm\n/Im1 Do\nQ\n`;
+                const obj5 = `5 0 obj\n<<\n/Length ${contentStream.length}\n>>\nstream\n${contentStream}\nendstream\nendobj\n\n`;
+                pdf += obj5;
+                console.log(`Object 5 at offset ${offsets[5]}: content length ${contentStream.length}`);
+                console.log(`Content stream: "${contentStream}"`);
+                
+                // Cross-reference table
+                const xrefStart = pdf.length;
+                pdf += 'xref\n0 6\n0000000000 65535 f \n';
+                for (let i = 1; i <= 5; i++) {
+                    const offset = offsets[i].toString().padStart(10, '0');
+                    pdf += `${offset} 00000 n \n`;
+                }
+                console.log(`Cross-reference table at offset ${xrefStart}`);
+                console.log(`Offsets: [${offsets.slice(1).join(', ')}]`);
+                
+                // Trailer
+                pdf += `trailer\n<<\n/Size 6\n/Root 1 0 R\n>>\nstartxref\n${xrefStart}\n%%EOF\n`;
+                
+                console.log(`✅ PDF structure complete: ${pdf.length} total bytes`);
+                
+                document.getElementById('pdfStructureResult').innerHTML = `
+                    <div class="success">
+                        ✅ PDF structure created successfully<br>
+                        📊 Total PDF size: ${pdf.length} bytes<br>
+                        📊 Image size in PDF: ${imageLength} bytes<br>
+                        📊 Cross-ref start: ${xrefStart}<br>
+                        📍 Image position: (${x.toFixed(1)}, ${y.toFixed(1)})<br>
+                        📐 Image size: ${width}x${height}
+                    </div>
+                    <details>
+                        <summary>View PDF Structure (first 500 chars)</summary>
+                        <pre>${pdf.substring(0, 500)}...</pre>
+                    </details>
+                `;
+                
+                return pdf;
+                
+            } catch (error) {
+                console.error('❌ PDF structure creation failed:', error);
+                document.getElementById('pdfStructureResult').innerHTML = `
+                    <div class="error">❌ PDF structure creation failed: ${error.message}</div>
+                `;
+                return null;
+            }
+        }
+
+        // Step 4: Full Test
+        async function runFullTest() {
+            try {
+                console.log('🚀 Running full PDF conversion test...');
+                
+                const dataURL = testCanvas();
+                const imageData = testImageData(dataURL);
+                
+                if (!imageData) {
+                    throw new Error('Image data processing failed');
+                }
+                
+                const pdfString = testPDFStructure(imageData.binaryData, 200, 150);
+                
+                if (!pdfString) {
+                    throw new Error('PDF structure creation failed');
+                }
+                
+                // Create PDF blob and download link
+                const pdfBlob = new Blob([pdfString], { type: 'application/pdf' });
+                const url = URL.createObjectURL(pdfBlob);
+                
+                document.getElementById('fullTestResult').innerHTML = `
+                    <div class="success">
+                        ✅ Full conversion test completed!<br>
+                        📄 Generated PDF: ${Math.round(pdfBlob.size / 1024)}KB<br>
+                        <a href="${url}" download="diagnostic-test.pdf" class="download-link">📥 Download Test PDF</a>
+                    </div>
+                `;
+                
+                console.log('✅ Full test completed successfully!');
+                
+            } catch (error) {
+                console.error('❌ Full test failed:', error);
+                document.getElementById('fullTestResult').innerHTML = `
+                    <div class="error">❌ Full test failed: ${error.message}</div>
+                `;
+            }
+        }
+
+        // Auto-run initial tests
+        window.onload = function() {
+            const dataURL = testCanvas();
+            const imageData = testImageData(dataURL);
+            if (imageData) {
+                testPDFStructure(imageData.binaryData, 200, 150);
+            }
+        };
+    </script>
+</body>
+</html>
