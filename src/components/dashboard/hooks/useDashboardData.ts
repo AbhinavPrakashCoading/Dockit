@@ -20,20 +20,8 @@ export const useDashboardData = (user: User) => {
     // Fast path: set loading to false immediately for better UX
     setLoading(false);
     
-    // Use mock data for now to ensure fast loading
-    setDocuments([
-      {
-        id: '1',
-        name: 'Sample Document.pdf',
-        examType: 'UPSC',
-        status: 'validated',
-        uploadDate: new Date().toLocaleDateString(),
-        size: '2.3 MB',
-        location: 'local',
-        validationScore: 95
-      }
-    ]);
-    
+    // Initialize with empty data - no placeholders
+    setDocuments([]);
     setProcessingJobs([]);
     setNotifications([]);
     setDrafts([]);

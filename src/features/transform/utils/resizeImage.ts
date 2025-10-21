@@ -158,8 +158,21 @@ async function loadImage(file: File): Promise<HTMLImageElement> {
   
   try {
     await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error('Failed to load image'));
+      const timeout = setTimeout(() => {
+        reject(new Error('Image loading timeout (10 seconds)'));
+      }, 10000);
+      
+      image.onload = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+      
+      image.onerror = (e) => {
+        clearTimeout(timeout);
+        console.error('❌ Image loading failed:', e);
+        reject(new Error('Failed to load image - file may be corrupted'));
+      };
+      
       image.src = imageUrl;
     });
     
@@ -191,6 +204,8 @@ function calculateDimensions(
 }
 
 export async function resizeImage(file: File, dimensions: Dimensions): Promise<File> {
+  console.log(`📐 Resizing image: ${file.name} (${Math.round(file.size / 1024)}KB) → ${dimensions.width}x${dimensions.height}`);
+  
   // Validate input and provide fallback type if needed
   const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
   const fileType = validImageTypes.includes(file.type) ? file.type : 'image/jpeg';
@@ -201,6 +216,10 @@ export async function resizeImage(file: File, dimensions: Dimensions): Promise<F
     width: Math.min(Math.max(1, dimensions.width), maxDimension),
     height: Math.min(Math.max(1, dimensions.height), maxDimension)
   };
+  
+  if (validDimensions.width !== dimensions.width || validDimensions.height !== dimensions.height) {
+    console.log(`📏 Adjusted dimensions: ${dimensions.width}x${dimensions.height} → ${validDimensions.width}x${validDimensions.height}`);
+  }
 
   try {
     // Load the image with timeout
@@ -258,10 +277,16 @@ export async function resizeImage(file: File, dimensions: Dimensions): Promise<F
     const blob = await createBlobFromCanvas(canvas, file.type);
 
     // Create new file with original metadata
-    return new File([blob], file.name, {
+    const resizedFile = new File([blob], file.name, {
       type: file.type,
       lastModified: file.lastModified
     });
+    
+    console.log(`✅ Resize complete: ${file.name}`);
+    console.log(`📊 Size change: ${Math.round(file.size / 1024)}KB → ${Math.round(resizedFile.size / 1024)}KB`);
+    console.log(`📐 Dimension change: ${image.naturalWidth}x${image.naturalHeight} → ${newDimensions.width}x${newDimensions.height}`);
+    
+    return resizedFile;
 
   } catch (error) {
     // If we completely fail, try to return the original file

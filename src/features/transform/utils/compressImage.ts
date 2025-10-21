@@ -1,17 +1,102 @@
+// Import the new configuration-based compression
+import { compressImageWithSchema } from '@/lib/processing/compressImageWithSchema';
+
 export async function compressImage(file: File, maxSizeKB: number): Promise<File> {
+  const currentSizeKB = Math.round(file.size / 1024);
+  console.log(`🚀 COMPRESSION ENTRY POINT: ${file.name} (${currentSizeKB}KB) → target: ${maxSizeKB}KB`);
+  
+  // 🎯 CRITICAL FIX: Don't compress files that are already within size limits!
+  if (currentSizeKB <= maxSizeKB) {
+    console.log(`✅ FILE ALREADY COMPLIANT: ${currentSizeKB}KB ≤ ${maxSizeKB}KB - NO COMPRESSION NEEDED!`);
+    console.log(`🎉 RETURNING ORIGINAL FILE WITHOUT COMPRESSION - QUALITY PRESERVED!`);
+    return file;
+  }
+  
+  console.log(`⚠️ COMPRESSION NEEDED: ${currentSizeKB}KB > ${maxSizeKB}KB (${(currentSizeKB / maxSizeKB).toFixed(1)}x over limit)`);
+  
+  // Use the new configuration-based compression for better results
+  try {
+    console.log(`🆕 ATTEMPTING NEW CONFIGURATION-BASED COMPRESSION`);
+    
+    // Convert maxSizeKB to requirements format expected by new system
+    const requirements = {
+      maxSize: `${maxSizeKB}KB`
+    };
+    
+    // Use 'document' as default document type - this can be enhanced later
+    console.log(`🎯 Calling compressImageWithSchema with document type and max size: ${maxSizeKB}KB`);
+    console.log(`🔍 Requirements object:`, requirements);
+    
+    const result = await compressImageWithSchema(file, 'document', requirements);
+    
+    console.log(`🔍 Compression result received:`, result);
+    
+    if (result && result.success && result.file) {
+      console.log(`✅ NEW COMPRESSION SUCCESSFUL! Strategy: ${result.strategy}, Final size: ${Math.round(result.file.size / 1024)}KB`);
+      console.log(`🎉 CONFIGURATION SYSTEM IS WORKING! No more hardcoded values!`);
+      return result.file;
+    } else {
+      console.error(`❌ New compression failed:`, result);
+      throw new Error(`New compression system returned unsuccessful result: ${JSON.stringify(result)}`);
+    }
+  } catch (error) {
+    // Fallback to legacy implementation if new one fails
+    console.error(`❌ NEW COMPRESSION FAILED, falling back to legacy:`, error);
+    console.error(`❌ Error details:`, error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && error.stack) {
+      console.error(`❌ Error stack:`, error.stack);
+    }
+    console.warn(`🔙 USING LEGACY COMPRESSION (with hardcoded values)`);
+    return await compressImageLegacy(file, maxSizeKB);
+  }
+}
+
+// Legacy compression implementation (kept as fallback)
+async function compressImageLegacy(file: File, maxSizeKB: number): Promise<File> {
   const originalSizeKB = Math.round(file.size / 1024);
+  
+  // 🎯 CRITICAL FIX: Don't compress files that are already within size limits!
+  if (originalSizeKB <= maxSizeKB) {
+    console.log(`✅ LEGACY CHECK: FILE ALREADY COMPLIANT: ${originalSizeKB}KB ≤ ${maxSizeKB}KB - NO COMPRESSION NEEDED!`);
+    return file;
+  }
+  
   const compressionRatio = originalSizeKB / maxSizeKB;
   
-  console.log(`🗜️ Compressing image: ${file.name} (${originalSizeKB}KB) to max ${maxSizeKB}KB (${compressionRatio.toFixed(1)}x compression needed)`);
+  console.log(`🗜️ Legacy compression: ${file.name} (${originalSizeKB}KB) to max ${maxSizeKB}KB (${compressionRatio.toFixed(1)}x compression needed)`);
 
   // Create an image element
   const image = new Image();
-  const imageUrl = URL.createObjectURL(file);
+  let imageUrl: string;
+  try {
+    imageUrl = URL.createObjectURL(file);
+    console.log(`🔗 Created object URL for legacy compression: ${file.name}`);
+  } catch (urlError) {
+    console.error(`❌ Legacy: Failed to create object URL:`, urlError);
+    throw new Error(`Failed to create object URL: ${urlError instanceof Error ? urlError.message : String(urlError)}`);
+  }
 
-  // Load the image
+  // Load the image with enhanced error handling
   await new Promise((resolve, reject) => {
-    image.onload = resolve;
-    image.onerror = () => reject(new Error('Failed to load image for compression'));
+    const timeoutId = setTimeout(() => {
+      URL.revokeObjectURL(imageUrl);
+      console.error(`❌ Legacy: Image loading timeout for ${file.name}`);
+      reject(new Error(`Legacy compression: Image loading timeout for ${file.name}`));
+    }, 30000);
+    
+    image.onload = () => {
+      clearTimeout(timeoutId);
+      console.log(`✅ Legacy: Image loaded successfully: ${image.width}x${image.height}`);
+      resolve(undefined);
+    };
+    
+    image.onerror = (event) => {
+      clearTimeout(timeoutId);
+      URL.revokeObjectURL(imageUrl);
+      console.error(`❌ Legacy: Image loading failed for ${file.name}:`, event);
+      reject(new Error(`Legacy compression: Failed to load image for compression: ${file.name} (${file.type})`));
+    };
+    
     image.src = imageUrl;
   });
 
@@ -22,12 +107,15 @@ export async function compressImage(file: File, maxSizeKB: number): Promise<File
   let ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Failed to get canvas context');
 
-  // Calculate aggressive initial settings for extreme compression
-  let quality = compressionRatio > 8 ? 0.3 : compressionRatio > 5 ? 0.5 : compressionRatio > 3 ? 0.7 : 0.9;
+  // 🎯 CONFIGURATION SYSTEM: Replace hardcoded values with configurable ones
+  const { getConfigurableQuality, getConfigurableAttempts } = await import('@/lib/processing/simpleConfigurableCompression');
+  
+  console.log(`🔄 LEGACY COMPRESSION NOW USING CONFIGURATION SYSTEM!`);
+  let quality = getConfigurableQuality(compressionRatio, 'document'); // Was: hardcoded 0.3/0.5/0.7
   let scaleFactor = compressionRatio > 8 ? 0.4 : compressionRatio > 5 ? 0.6 : compressionRatio > 3 ? 0.8 : 1.0;
   
   let attempt = 0;
-  const MAX_ATTEMPTS = 25; // Increased attempts for extreme compression
+  const MAX_ATTEMPTS = getConfigurableAttempts(compressionRatio); // Was: hardcoded 25
 
   console.log(`🎯 Starting with aggressive settings: quality=${quality.toFixed(2)}, scale=${scaleFactor.toFixed(2)}`);
 

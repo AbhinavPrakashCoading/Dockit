@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, CheckCircle, AlertTriangle, Clock, FileText, Eye, Download, RefreshCw } from 'lucide-react';
 import { transformFile } from '@/features/transform/transformFile';
+import { normalizeSchemaFormat, parseSizeToKB } from '@/lib/schema-format-normalizer';
 
 interface ProcessingStep {
   id: string;
@@ -57,35 +58,25 @@ const ProcessingModal: React.FC<ProcessingModalProps> = ({
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ file: File; type: string } | null>(null);
 
-  // Helper functions for file transformation
+  // Helper functions for file transformation - ENHANCED with universal normalizer
   const getRequiredFormat = (requirement: any) => {
-    // Handle multiple possible structures
+    // Handle multiple possible structures using universal normalizer
     const formats = requirement.requirements?.format || 
                    requirement.format ||
                    requirement.requirements?.formats ||
                    requirement.formats;
                    
-    console.log('🔍 Extracting format from:', { requirement, formats });
+    console.log('🔍 Extracting format from requirement:', { requirement, formats });
     
-    if (Array.isArray(formats)) {
-      const format = formats[0].toLowerCase();
-      if (format.includes('jpg') || format.includes('jpeg')) return 'image/jpeg';
-      if (format.includes('png')) return 'image/png';
-      if (format.includes('pdf')) return 'application/pdf';
-    }
+    // 🎯 USE UNIVERSAL SCHEMA NORMALIZER
+    const normalizedFormat = normalizeSchemaFormat(formats || 'JPEG');
     
-    if (typeof formats === 'string') {
-      const format = formats.toLowerCase();
-      if (format.includes('jpg') || format.includes('jpeg')) return 'image/jpeg';
-      if (format.includes('png')) return 'image/png';
-      if (format.includes('pdf')) return 'application/pdf';
-    }
-    
-    return 'image/jpeg'; // default
+    console.log(`✅ Format normalized: ${JSON.stringify(formats)} → "${normalizedFormat}"`);
+    return normalizedFormat;
   };
 
   const getMaxSizeKB = (requirement: any) => {
-    // Handle multiple possible structures
+    // Handle multiple possible structures using universal normalizer
     const maxSize = requirement.requirements?.maxSize || 
                    requirement.maxSize ||
                    requirement.requirements?.maxSizeKB ||
@@ -93,27 +84,13 @@ const ProcessingModal: React.FC<ProcessingModalProps> = ({
                    requirement.requirements?.max_size ||
                    requirement.max_size;
                    
-    console.log('🔍 Extracting maxSize from:', { requirement, maxSize });
+    console.log('🔍 Extracting maxSize from requirement:', { requirement, maxSize });
     
-    if (typeof maxSize === 'string') {
-      const match = maxSize.match(/(\d+)\s*KB/i);
-      if (match) return parseInt(match[1]);
-      
-      // Handle other units like MB
-      const mbMatch = maxSize.match(/(\d+)\s*MB/i);
-      if (mbMatch) return parseInt(mbMatch[1]) * 1024;
-    }
+    // 🎯 USE UNIVERSAL SIZE PARSER
+    const normalizedSize = parseSizeToKB(maxSize || '100KB');
     
-    if (typeof maxSize === 'number') return maxSize;
-    
-    // For JEE specific defaults based on document type
-    if (requirement.type === 'Photo' || requirement.type === 'photograph') return 100;
-    if (requirement.type === 'Signature' || requirement.type === 'signature') return 50;
-    if (requirement.type.toLowerCase().includes('proof') || 
-        requirement.type.toLowerCase().includes('certificate') ||
-        requirement.type.toLowerCase().includes('marksheet')) return 300;
-    
-    return 1024; // default 1MB
+    console.log(`✅ Size normalized: "${maxSize}" → ${normalizedSize}KB`);
+    return normalizedSize;
   };
 
   const getDimensions = (requirement: any) => {
@@ -263,7 +240,7 @@ const ProcessingModal: React.FC<ProcessingModalProps> = ({
                 continue;
               }
 
-              // Create transform requirement
+              // Create transform requirement using UNIVERSAL NORMALIZER
               const transformRequirement = {
                 type: type,
                 format: getRequiredFormat(requirement),
@@ -271,18 +248,33 @@ const ProcessingModal: React.FC<ProcessingModalProps> = ({
                 dimensions: getDimensions(requirement)
               };
 
-              console.log(`🎯 Transform requirement for ${type}:`, transformRequirement);
+              console.log(`🎯 ENHANCED Transform requirement for ${type}:`, transformRequirement);
+              console.log(`📋 Original requirement structure:`, requirement);
+              console.log(`📄 File info: ${originalFile.name} (${originalFile.type}, ${Math.round(originalFile.size/1024)}KB)`);
 
               // Transform the file
               const transformedFile = await transformFile(originalFile, transformRequirement);
               transformedFilesMap[type] = transformedFile;
               
               console.log(`✅ ${type} transformed successfully:`, {
+                originalName: originalFile.name,
+                transformedName: transformedFile.name,
                 originalSize: Math.round(originalFile.size / 1024) + 'KB',
                 transformedSize: Math.round(transformedFile.size / 1024) + 'KB',
                 originalType: originalFile.type,
-                transformedType: transformedFile.type
+                transformedType: transformedFile.type,
+                formatConversion: `${originalFile.type} → ${transformedFile.type}`,
+                sizeReduction: `${((1 - transformedFile.size/originalFile.size) * 100).toFixed(1)}%`,
+                requiredFormat: transformRequirement.format,
+                requiredMaxSize: transformRequirement.maxSizeKB + 'KB'
               });
+              
+              // 🎯 KEY VALIDATION: Check if conversion worked as expected
+              if (transformRequirement.format !== originalFile.type && transformedFile.type === transformRequirement.format) {
+                console.log(`🎉 FORMAT CONVERSION SUCCESS: ${originalFile.type} → ${transformedFile.type} as required!`);
+              } else if (transformRequirement.format !== originalFile.type && transformedFile.type !== transformRequirement.format) {
+                console.error(`❌ FORMAT CONVERSION FAILED: Required ${transformRequirement.format}, got ${transformedFile.type}`);
+              }
               
             } catch (error) {
               console.error(`❌ Failed to transform ${type}:`, error);

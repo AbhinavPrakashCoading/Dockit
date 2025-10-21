@@ -36,7 +36,7 @@ export const useExamData = () => {
             id: "jee-mains-2025-fallback",
             name: "JEE Mains 2025 (Test Mode)",
             category: "Engineering",
-            logo: getExamIcon("jee"),
+            logo: null, // Use null instead of emoji to prevent src errors
             color: getExamColor("jee"),
             hasSchema: true,
             isSchemaLoaded: true,
@@ -70,7 +70,7 @@ export const useExamData = () => {
           id: doc.id,
           name: doc.examName,
           category: doc.examType || 'Parsed',
-          logo: getExamIcon(doc.examType || doc.examName),
+          logo: null, // Use null instead of emoji to prevent src errors
           color: getExamColor(doc.examType || doc.examName),
           hasSchema: true,
           isSchemaLoaded: true,
@@ -98,7 +98,7 @@ export const useExamData = () => {
           id: "jee-mains-2025-error-fallback",
           name: "JEE Mains 2025 (Offline Mode)",
           category: "Engineering",
-          logo: getExamIcon("jee"),
+          logo: null, // Use null instead of emoji to prevent src errors
           color: getExamColor("jee"),
           hasSchema: true,
           isSchemaLoaded: true,

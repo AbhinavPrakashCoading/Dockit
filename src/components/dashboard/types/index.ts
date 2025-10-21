@@ -43,7 +43,7 @@ export interface ExamConfig {
   id: string;
   name: string;
   category: string;
-  logo: string;
+  logo: string | null;
   color: string;
   schemaPath?: string;
   requiredDocuments?: string[];
@@ -98,6 +98,8 @@ export interface StatsCardProps {
   change?: string;
   icon: any; // React component
   color: string;
+  lightBackground?: string; // For guest-mode style light backgrounds
+  iconColor?: string; // For guest-mode style colored icons
 }
 
 export interface DashboardSectionProps {

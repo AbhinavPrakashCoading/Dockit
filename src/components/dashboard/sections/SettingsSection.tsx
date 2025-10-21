@@ -203,17 +203,17 @@ const SettingsSection: React.FC<DashboardSectionProps> = ({ user, onSectionChang
                   <Cloud className="w-5 h-5 text-blue-600" />
                   <div>
                     <p className="font-medium text-gray-900">Storage Usage</p>
-                    <p className="text-sm text-gray-600">{user.storageUsed || 2.5} GB of {user.storageLimit || 15} GB used</p>
+                    <p className="text-sm text-gray-600">{user.storageUsed || 0} GB of {user.storageLimit || 0} GB used</p>
                   </div>
                 </div>
                 <span className="text-sm font-medium text-gray-900">
-                  {Math.round(((user.storageUsed || 2.5) / (user.storageLimit || 15)) * 100)}%
+                  {user.storageLimit > 0 ? Math.round(((user.storageUsed || 0) / user.storageLimit) * 100) : 0}%
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-blue-600 h-2 rounded-full" 
-                  style={{ width: `${((user.storageUsed || 2.5) / (user.storageLimit || 15)) * 100}%` }}
+                  style={{ width: `${user.storageLimit > 0 ? ((user.storageUsed || 0) / user.storageLimit) * 100 : 0}%` }}
                 ></div>
               </div>
             </div>

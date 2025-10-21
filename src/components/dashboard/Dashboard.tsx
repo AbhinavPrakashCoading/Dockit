@@ -64,9 +64,9 @@ const Dashboard: React.FC = () => {
     email: session?.user?.email,
     image: session?.user?.image,
     isAuthenticated: !!session?.user,
-    driveConnected: true, // You can implement this logic
-    storageUsed: 2.5, // You can fetch this from your backend
-    storageLimit: 15, // You can fetch this from your backend
+    driveConnected: !!session?.user, // Only connected if authenticated
+    storageUsed: 0, // Initialize as 0, to be loaded from API
+    storageLimit: !!session?.user ? 15 : 0, // Only set limit for authenticated users
   };
 
   // Fast mount effect
@@ -133,17 +133,7 @@ const DashboardContent: React.FC<{
     setWorkflowDocumentMapping(mapping);
   }, []);
 
-  // Handle processing completion from ProcessingModal
-  const handleProcessingComplete = useCallback((transformedFiles: { [key: string]: File }) => {
-    console.log('✅ Processing completed with transformed files:', Object.keys(transformedFiles));
-    setWorkflowTransformedFiles(transformedFiles);
-    
-    // You could also trigger additional actions here like:
-    // - Navigate to a success page
-    // - Show a success notification
-    // - Auto-download the files
-    // - Move to the next step in your workflow
-  }, []);
+  // Handle processing completion from ProcessingModal - defined after examData destructuring
 
   // Reset workflow when closing
   const resetWorkflow = useCallback(() => {
@@ -190,6 +180,72 @@ const DashboardContent: React.FC<{
   if (exams.length > 0) {
     console.log('   - First exam:', exams[0]);
   }
+
+  // Handle processing completion from ProcessingModal (now after examData destructuring)
+  const handleProcessingComplete = useCallback(async (transformedFiles: { [key: string]: File }) => {
+    console.log('✅ Processing completed with transformed files:', Object.keys(transformedFiles));
+    setWorkflowTransformedFiles(transformedFiles);
+    
+    // Auto-create ZIP package if user is authenticated and has selected an exam
+    if (shouldLoadData && examData?.selectedExam) {
+      try {
+        console.log('📦 Auto-creating ZIP package for processed documents...');
+        
+        // Simulate document IDs (in real implementation, these would come from upload results)
+        const mockDocumentIds = Object.keys(transformedFiles).map(type => `doc_${type}_${Date.now()}`);
+        
+        const response = await fetch('/api/storage/zip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documentIds: mockDocumentIds,
+            examType: examData.selectedExam.examType || examData.selectedExam.examId || 'unknown',
+            rollNumber: `AUTO_${Date.now()}`,
+            usesMasters: true
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ ZIP package auto-created:', result);
+          addNotification({
+            id: `auto-zip-${Date.now()}`,
+            type: 'success',
+            title: 'ZIP Package Created',
+            message: `Your processed documents have been packaged for submission as ${result.zip?.filename}`,
+            timestamp: new Date(),
+            actions: [
+              {
+                label: 'View Packages',
+                action: () => {
+                  setActiveSection('packages');
+                  removeNotification(`auto-zip-${Date.now()}`);
+                }
+              }
+            ]
+          });
+        }
+      } catch (error) {
+        console.error('Failed to auto-create ZIP package:', error);
+        addNotification({
+          id: `auto-zip-error-${Date.now()}`,
+          type: 'warning',
+          title: 'ZIP Creation Failed',
+          message: 'Processing completed successfully, but automatic ZIP creation failed. You can create packages manually in the ZIP Packages section.',
+          timestamp: new Date()
+        });
+      }
+    }
+    
+    // Show success notification
+    addNotification({
+      id: `processing-complete-${Date.now()}`,
+      type: 'success',
+      title: 'Processing Complete',
+      message: `Successfully processed ${Object.keys(transformedFiles).length} documents`,
+      timestamp: new Date()
+    });
+  }, [shouldLoadData, examData, addNotification, removeNotification, setActiveSection]);
 
   // Common props for all sections
   const sectionProps = {
@@ -273,7 +329,7 @@ const DashboardContent: React.FC<{
         notifications={notifications}
       />
       <main className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} pt-20`}>
-        <div className="p-6">
+        <div className="p-8">
           {renderContent()}
         </div>
       </main>

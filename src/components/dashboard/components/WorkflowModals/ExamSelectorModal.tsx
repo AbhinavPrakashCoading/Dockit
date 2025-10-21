@@ -101,17 +101,23 @@ const ExamSelectorModal: React.FC<ExamSelectorModalProps> = ({
                       className="p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition text-center"
                     >
                       <div className={`w-16 h-16 ${exam.color} rounded-full flex items-center justify-center mx-auto mb-2 relative`}>
-                        <img 
-                          src={exam.logo} 
-                          alt={exam.name}
-                          className="w-12 h-12 rounded-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.nextElementSibling!.textContent = exam.name.charAt(0);
-                          }}
-                        />
-                        <span className="text-2xl font-bold text-white hidden">{exam.name.charAt(0)}</span>
+                        {exam.logo ? (
+                          <img 
+                            src={exam.logo} 
+                            alt={exam.name}
+                            className="w-12 h-12 rounded-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const fallbackElement = target.nextElementSibling as HTMLSpanElement;
+                              if (fallbackElement) {
+                                fallbackElement.style.display = 'flex';
+                                fallbackElement.textContent = exam.name.charAt(0);
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <span className={`text-2xl font-bold text-white ${exam.logo ? 'hidden' : 'flex'}`}>{exam.name.charAt(0)}</span>
                         {(exam.hasSchema || exam.schema) && (
                           <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                             <CheckCircle className="w-4 h-4 text-white" />
@@ -162,17 +168,23 @@ const ExamSelectorModal: React.FC<ExamSelectorModalProps> = ({
                     className="p-4 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition flex items-center gap-4"
                   >
                     <div className={`w-12 h-12 ${exam.color} rounded-lg flex items-center justify-center flex-shrink-0 relative`}>
-                      <img 
-                        src={exam.logo} 
-                        alt={exam.name}
-                        className="w-8 h-8 rounded-lg object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.nextElementSibling!.textContent = exam.name.charAt(0);
-                        }}
-                      />
-                      <span className="text-lg font-bold text-white hidden">{exam.name.charAt(0)}</span>
+                      {exam.logo ? (
+                        <img 
+                          src={exam.logo} 
+                          alt={exam.name}
+                          className="w-8 h-8 rounded-lg object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const fallbackElement = target.nextElementSibling as HTMLSpanElement;
+                            if (fallbackElement) {
+                              fallbackElement.style.display = 'flex';
+                              fallbackElement.textContent = exam.name.charAt(0);
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <span className={`text-lg font-bold text-white ${exam.logo ? 'hidden' : 'flex'}`}>{exam.name.charAt(0)}</span>
                       {(exam.hasSchema || exam.schema) && (
                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
                           <CheckCircle className="w-3 h-3 text-white" />

@@ -67,6 +67,25 @@ export class DocumentAwareImageProcessor {
         result.warnings.push(...validation.recommendations);
       }
       
+      // 🎯 CRITICAL FIX: Check size compliance - don't process files already within limits
+      if (config.requirements.maxFileSizeKB) {
+        const currentSizeKB = file.size / 1024;
+        const maxSizeKB = config.requirements.maxFileSizeKB;
+        const minSizeKB = config.requirements.minFileSizeKB || 0;
+        
+        if (currentSizeKB <= maxSizeKB && currentSizeKB >= minSizeKB && !forceType) {
+          // File already complies with size requirements
+          result.success = true;
+          result.processedFile = file;
+          result.processedSize = file.size;
+          result.compressionRatio = 0; // No compression needed
+          result.transformations.push('size-compliant-skip');
+          result.warnings.push(`File already complies with size limit (${currentSizeKB.toFixed(1)}KB within ${minSizeKB}-${maxSizeKB}KB range)`);
+          result.metadata.processingTime = Date.now() - startTime;
+          return result;
+        }
+      }
+      
       // Load image
       const imageData = await this.loadImage(file);
       result.metadata.originalDimensions = {

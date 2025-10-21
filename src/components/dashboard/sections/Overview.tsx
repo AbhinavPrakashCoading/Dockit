@@ -11,7 +11,8 @@ import {
   Shield, 
   Package,
   Plus,
-  BarChart3
+  BarChart3,
+  AlertTriangle
 } from 'lucide-react';
 import { DashboardSectionProps } from '../types';
 import StatsCard from '../components/StatsCard';
@@ -37,7 +38,7 @@ const Overview: React.FC<OverviewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -89,130 +90,140 @@ const Overview: React.FC<OverviewProps> = ({
         </div>
       )}
 
+      {/* Quick Stats - Guest Mode Style */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Documents"
           value={documents.length.toString()}
-          change={undefined} // Remove fake percentage changes
           icon={FileText}
-          color="bg-gradient-to-r from-blue-500 to-blue-600"
-        />
-        <StatsCard
-          title="Validated"
-          value={documents.filter(d => d.status === 'validated').length.toString()}
-          change={undefined} // Remove fake percentage changes
-          icon={CheckCircle}
-          color="bg-gradient-to-r from-green-500 to-green-600"
+          color="bg-blue-100"
+          lightBackground="bg-blue-100"
+          iconColor="text-blue-600"
         />
         <StatsCard
           title="Processing"
           value={documents.filter(d => ['processing', 'enhancing'].includes(d.status)).length.toString()}
           icon={RefreshCw}
-          color="bg-gradient-to-r from-purple-500 to-purple-600"
+          color="bg-yellow-100"
+          lightBackground="bg-yellow-100"
+          iconColor="text-yellow-600"
         />
         <StatsCard
-          title={user.isAuthenticated ? "Storage Used" : "Session Active"}
-          value={user.isAuthenticated ? `${user.storageUsed || 0}GB` : "Local"}
-          change={user.isAuthenticated && (user.storageUsed || 0) > 0 ? `${Math.round(((user.storageUsed || 0) / (user.storageLimit || 1)) * 100)}%` : undefined}
-          icon={user.isAuthenticated ? HardDrive : Shield}
-          color="bg-gradient-to-r from-orange-500 to-orange-600"
+          title="Validated"
+          value={documents.filter(d => d.status === 'validated').length.toString()}
+          icon={CheckCircle}
+          color="bg-green-100"
+          lightBackground="bg-green-100"
+          iconColor="text-green-600"
+        />
+        <StatsCard
+          title="Issues"
+          value={documents.filter(d => d.status === 'failed').length.toString()}
+          icon={AlertTriangle}
+          color="bg-red-100"
+          lightBackground="bg-red-100"
+          iconColor="text-red-600"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <button 
-              onClick={() => onSectionChange('upload')}
-              className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="text-sm font-medium">Upload</span>
-            </button>
-            
-            <button 
-              onClick={() => {
-                onSectionChange('packages');
-                setCurrentStep?.('exam-selector');
-              }}
-              className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <Package className="w-4 h-4" />
-              <span className="text-sm font-medium">Generate ZIP</span>
-            </button>
-            
-            <button 
-              onClick={() => onSectionChange('documents')}
-              className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <FileText className="w-4 h-4" />
-              <span className="text-sm font-medium">Documents</span>
-            </button>
-            
-            <button 
-              onClick={() => onSectionChange('analytics')}
-              className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span className="text-sm font-medium">Analytics</span>
-            </button>
+      {/* Generate ZIP Package - Prominent Gradient Banner */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold mb-2">Generate ZIP Package</h3>
+            <p className="text-purple-100">Create document packages for exam submissions</p>
           </div>
+          <button
+            onClick={() => {
+              onSectionChange('packages');
+              setCurrentStep?.('exam-selector');
+            }}
+            className="bg-white text-purple-600 px-6 py-3 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+          >
+            <Package className="w-5 h-5" />
+            Generate Package
+          </button>
         </div>
+      </div>
 
-        <ProcessingQueue processingJobs={processingJobs} />
+      {/* Quick Actions - Guest Mode Style */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button 
+            onClick={() => onSectionChange('upload')}
+            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left hover:scale-105 hover:-translate-y-1 hover:border-purple-300 hover:bg-purple-50 hover:shadow-lg"
+          >
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
+              <Plus className="w-4 h-4 text-purple-600" />
+            </div>
+            <h4 className="font-medium text-gray-900">Upload Documents</h4>
+            <p className="text-sm text-gray-600 mt-1">Start processing your documents</p>
+          </button>
+
+          <button 
+            onClick={() => onSectionChange('documents')}
+            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left hover:scale-105 hover:-translate-y-1 hover:border-blue-300 hover:bg-blue-50 hover:shadow-lg"
+          >
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
+              <FileText className="w-4 h-4 text-blue-600" />
+            </div>
+            <h4 className="font-medium text-gray-900">View Documents</h4>
+            <p className="text-sm text-gray-600 mt-1">Manage your document library</p>
+          </button>
+
+          <button 
+            onClick={() => onSectionChange('analytics')}
+            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left hover:scale-105 hover:-translate-y-1 hover:border-orange-300 hover:bg-orange-50 hover:shadow-lg"
+          >
+            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
+              <BarChart3 className="w-4 h-4 text-orange-600" />
+            </div>
+            <h4 className="font-medium text-gray-900">View Analytics</h4>
+            <p className="text-sm text-gray-600 mt-1">Track processing performance</p>
+          </button>
+        </div>
+      </div>
+
+      {/* Recent Documents - Less Prominent */}
+      {documents.length > 0 && (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {user.isAuthenticated ? 'Recent Documents' : 'Session Documents'}
           </h3>
           <div className="space-y-3">
-            {documents.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No documents yet</p>
-                <button
-                  onClick={() => onSectionChange('upload')}
-                  className="text-purple-600 hover:text-purple-700 text-sm font-medium mt-2 flex items-center justify-center gap-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  Upload your first document
-                </button>
-              </div>
-            ) : (
-              documents.slice(0, 5).map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      {doc.thumbnail ? (
-                        <img src={doc.thumbnail} alt={doc.name} className="w-10 h-10 rounded object-cover" />
-                      ) : (
-                        <div className="w-10 h-10 bg-purple-100 rounded flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-purple-600" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 truncate">{doc.name}</p>
-                      <p className="text-xs text-gray-500">{doc.examType} • {doc.uploadDate}</p>
-                    </div>
+            {documents.slice(0, 3).map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    {doc.thumbnail ? (
+                      <img src={doc.thumbnail} alt={doc.name} className="w-10 h-10 rounded object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 bg-purple-100 rounded flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-purple-600" />
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      doc.status === 'validated' ? 'bg-green-100 text-green-800' :
-                      doc.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                      doc.status === 'enhancing' ? 'bg-purple-100 text-purple-800' :
-                      doc.status === 'failed' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {doc.status}
-                    </span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 truncate">{doc.name}</p>
+                    <p className="text-xs text-gray-500">{doc.examType} • {doc.uploadDate}</p>
                   </div>
                 </div>
-              ))
-            )}
+                <div className="flex items-center space-x-2">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    doc.status === 'validated' ? 'bg-green-100 text-green-800' :
+                    doc.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                    doc.status === 'enhancing' ? 'bg-purple-100 text-purple-800' :
+                    doc.status === 'failed' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {doc.status}
+                  </span>
+                </div>
+              </div>
+            ))}
             
-            {documents.length > 5 && (
+            {documents.length > 3 && (
               <div className="text-center pt-3">
                 <button
                   onClick={() => onSectionChange('documents')}
@@ -224,7 +235,12 @@ const Overview: React.FC<OverviewProps> = ({
             )}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Processing Queue - Relocated and Optional */}
+      {processingJobs.length > 0 && (
+        <ProcessingQueue processingJobs={processingJobs} />
+      )}
     </div>
   );
 };

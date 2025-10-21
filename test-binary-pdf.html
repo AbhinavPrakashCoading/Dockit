@@ -1,0 +1,94 @@
+// Quick test for binary PDF generation
+console.log('🧪 Testing binary PDF generation...');
+
+async function testBinaryPDFGeneration() {
+  try {
+    // Create a small test canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 100;
+    canvas.height = 100;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('No canvas context');
+    
+    // Draw a simple red square
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect(0, 0, 100, 100);
+    
+    // Add white text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('TEST', 50, 55);
+    
+    // Convert to blob
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('Canvas toBlob failed'));
+      }, 'image/jpeg', 0.9);
+    });
+    
+    const testFile = new File([blob], 'test.jpg', { type: 'image/jpeg' });
+    
+    console.log(`📁 Test file created: ${testFile.size} bytes`);
+    
+    // Test the PDF conversion
+    const { convertFormatEnhanced } = await import('./src/features/transform/utils/imageToPDFConverter.js');
+    
+    console.log('🔄 Converting to PDF...');
+    const pdfFile = await convertFormatEnhanced(testFile, 'application/pdf');
+    
+    console.log(`✅ PDF created: ${pdfFile.size} bytes`);
+    console.log(`📊 Type: ${pdfFile.type}`);
+    
+    // Check if PDF has valid header
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    const header = Array.from(bytes.slice(0, 8)).map(b => String.fromCharCode(b)).join('');
+    
+    console.log(`📄 PDF header: "${header}"`);
+    console.log(`🔍 First 20 bytes: [${Array.from(bytes.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' ')}]`);
+    
+    if (header.startsWith('%PDF-1.4')) {
+      console.log('✅ PDF header is correct!');
+    } else {
+      console.log('❌ PDF header is incorrect');
+    }
+    
+    // Create download link
+    const url = URL.createObjectURL(pdfFile);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = pdfFile.name;
+    link.textContent = `Download ${pdfFile.name} (${Math.round(pdfFile.size / 1024)}KB)`;
+    link.style.cssText = 'display: block; margin: 10px; padding: 10px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px;';
+    
+    document.body.appendChild(link);
+    
+    console.log('🎉 Test completed! Check the download link.');
+    
+  } catch (error) {
+    console.error('❌ Test failed:', error);
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'margin: 10px; padding: 10px; background: #f44336; color: white; border-radius: 4px;';
+    errorDiv.textContent = `Test failed: ${error.message}`;
+    document.body.appendChild(errorDiv);
+  }
+}
+
+// Set up page
+document.body.innerHTML = `
+  <h1>🧪 Binary PDF Generation Test</h1>
+  <p>Testing the fixed binary handling...</p>
+  <div id="status">Running test...</div>
+`;
+
+// Run test
+testBinaryPDFGeneration().then(() => {
+  document.getElementById('status').textContent = 'Test completed!';
+}).catch(error => {
+  document.getElementById('status').textContent = 'Test failed!';
+  console.error('Test runner error:', error);
+});

@@ -4,7 +4,25 @@
 import React from 'react';
 import { StatsCardProps } from '../types';
 
-const StatsCard: React.FC<StatsCardProps> = ({ title, value, change, icon: Icon, color }) => {
+const StatsCard: React.FC<StatsCardProps> = ({ title, value, change, icon: Icon, color, lightBackground, iconColor }) => {
+  // Use light background style like FastOverview if specified
+  if (lightBackground) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-600">{title}</p>
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
+          </div>
+          <div className={`w-8 h-8 ${lightBackground} rounded-lg flex items-center justify-center`}>
+            <Icon className={`w-4 h-4 ${iconColor}`} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Original style for backward compatibility
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
