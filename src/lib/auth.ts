@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   session: {
-    strategy: 'jwt', // Always use JWT strategy for credentials provider compatibility
+    strategy: 'database', // Use database strategy for persistent sessions
   },
   callbacks: {
     async jwt({ token, user, account }) {
