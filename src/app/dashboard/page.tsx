@@ -152,9 +152,10 @@ function SessionOptions({ onSuccess }: { onSuccess: () => void }) {
 }
 
 // Authentication Options Component  
-function AuthenticationOptions({ onSuccess }: { onSuccess: () => void }) {
+function AuthenticationOptions({ onSuccess }: { onSuccess: () => void }): JSX.Element {
   const [showForm, setShowForm] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleGoogleSignIn = async () => {
     try {
@@ -175,21 +176,19 @@ function AuthenticationOptions({ onSuccess }: { onSuccess: () => void }) {
     }
   }
 
+
   if (showForm) {
     const SignUpForm = require('@/app/auth/signup/page').default
-    return (
-      <SignUpForm 
-        skipRedirectCheck={true}
-        onSuccess={onSuccess}
-        showHeader={false}
-        showSignInLink={false}
-      />
-    )
+    return <SignUpForm skipRedirectCheck={true} onSuccess={onSuccess} showHeader={false} showSignInLink={false} />
   }
 
   return (
     <div className="space-y-4">
-      {/* Google Sign In */}
+      {error && (
+        <div className="text-red-200 bg-red-700/80 px-4 py-2 rounded text-sm text-center max-w-xs mx-auto">
+          {error}
+        </div>
+      )}
       <button
         onClick={handleGoogleSignIn}
         disabled={isGoogleLoading}
@@ -209,17 +208,17 @@ function AuthenticationOptions({ onSuccess }: { onSuccess: () => void }) {
           </>
         )}
       </button>
-      
       {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-slate-300"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-white px-2 text-slate-500 font-medium">Or continue with email</span>
+          <span className="bg-white px-2 text-slate-500 font-medium">
+            Or continue with email
+          </span>
         </div>
       </div>
-      
       {/* Email Sign Up */}
       <button
         onClick={() => setShowForm(true)}
@@ -230,7 +229,6 @@ function AuthenticationOptions({ onSuccess }: { onSuccess: () => void }) {
         </svg>
         <span className="font-medium">Sign up with Email</span>
       </button>
-      
       {/* Sign In Link */}
       <div className="text-center text-sm text-slate-600">
         Already have an account?{' '}

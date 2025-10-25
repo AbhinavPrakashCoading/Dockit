@@ -6,7 +6,9 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export const authOptions: NextAuthOptions = {
-  adapter: process.env.DATABASE_URL ? PrismaAdapter(prisma) as any : undefined,
+  // Note: PrismaAdapter is removed when using JWT strategy with CredentialsProvider
+  // adapter: PrismaAdapter(prisma),
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
       GoogleProvider({
@@ -72,21 +74,63 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   session: {
-    strategy: 'database', // Use database strategy for persistent sessions
+    strategy: 'jwt', // Use JWT strategy for sessions (required for CredentialsProvider)
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  debug: true, // Enable debug mode to see what's happening
   callbacks: {
+    async signIn({ user, account, profile }) {
+      console.log('SignIn Callback - user:', user, 'account:', account, 'profile:', profile)
+      
+      // For OAuth providers (Google), save user to database if not exists
+      if (account?.provider === 'google' && user.email) {
+        try {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email }
+          })
+          
+          if (!existingUser) {
+            // Create new user in database
+            await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name,
+                image: user.image,
+                emailVerified: new Date(),
+              }
+            })
+            console.log('New user created via Google OAuth:', user.email)
+          } else {
+            console.log('Existing user signed in via Google OAuth:', user.email)
+          }
+        } catch (error) {
+          console.error('Error saving Google OAuth user:', error)
+          // Don't block sign-in if database save fails
+        }
+      }
+      
+      return true
+    },
     async jwt({ token, user, account }) {
+      console.log('JWT Callback - token:', token, 'user:', user, 'account:', account)
       // Persist the OAuth account info or user data to the token when signing in
-      if (account && user) {
+      if (user) {
         token.id = user.id
+        token.email = user.email
+        token.name = user.name
+      }
+      if (account) {
+        token.accessToken = account.access_token
       }
       return token
     },
-    async session({ session, user, token }) {
-      if (user && session.user) {
-        (session.user as any).id = user.id
-      } else if (token && session.user) {
-        (session.user as any).id = token.sub || token.id
+    async session({ session, token }) {
+      console.log('Session Callback - session:', session, 'token:', token)
+      // Add user info to session from token
+      if (token && session.user) {
+        (session.user as any).id = token.id || token.sub
+        session.user.email = token.email as string
+        session.user.name = token.name as string
       }
       return session
     },

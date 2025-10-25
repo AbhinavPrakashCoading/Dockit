@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export async function POST(req: NextRequest) {
+  console.log('Signup API called');
   try {
     const { name, email, password } = await req.json()
 

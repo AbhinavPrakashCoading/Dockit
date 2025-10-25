@@ -37,20 +37,10 @@ export default function SignInPage() {
     try {
       setIsLoading(true)
       setError('')
-      const result = await signIn('google', { 
-        callbackUrl: '/dashboard',
-        redirect: false 
-      })
-      
-      if (result?.error) {
-        setError('Failed to sign in with Google. Please try again.')
-      } else if (result?.ok) {
-        router.push('/dashboard')
-      }
+      await signIn('google', { callbackUrl: '/dashboard' })
     } catch (error) {
-      console.error('Google sign-in error:', error)
-      setError('An unexpected error occurred. Please try again.')
-    } finally {
+      console.error('Google sign in error:', error)
+      setError('Failed to sign in with Google. Please try again.')
       setIsLoading(false)
     }
   }
@@ -58,31 +48,29 @@ export default function SignInPage() {
   const handleCredentialsSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.email || !formData.password) {
-      setError('Please fill in all fields')
-      return
-    }
-
     try {
       setIsLoading(true)
       setError('')
-      
+
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
         redirect: false,
-        callbackUrl: '/dashboard'
       })
 
       if (result?.error) {
         setError('Invalid email or password. Please try again.')
-      } else if (result?.ok) {
+        setIsLoading(false)
+        return
+      }
+
+      if (result?.ok) {
+        // Sign in successful, redirect to dashboard
         router.push('/dashboard')
       }
     } catch (error) {
-      console.error('Credentials sign-in error:', error)
-      setError('An unexpected error occurred. Please try again.')
-    } finally {
+      console.error('Sign in error:', error)
+      setError('An error occurred during sign in. Please try again.')
       setIsLoading(false)
     }
   }

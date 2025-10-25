@@ -76,6 +76,8 @@ export default function SignUpPage({
     }
   }
 
+
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -114,7 +116,7 @@ export default function SignUpPage({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create account')
+  throw new Error(data.error || data.message || 'Failed to create account')
       }
 
       setSuccess('Account created successfully! You can now sign in.')

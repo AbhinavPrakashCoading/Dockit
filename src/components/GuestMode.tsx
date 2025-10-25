@@ -74,32 +74,45 @@ interface AuthButtonsProps {
 
 const AuthButtons: React.FC<AuthButtonsProps> = ({ redirectTo }) => {
   const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
 
   const handleSignIn = async () => {
-    await signIn(undefined, { 
-      callbackUrl: redirectTo || '/dashboard',
-      redirect: true 
-    })
+    try {
+      await signIn(undefined, { 
+        callbackUrl: redirectTo || '/dashboard',
+        redirect: true 
+      })
+    } catch (error) {
+      console.error('Sign in error:', error)
+    }
   }
+
 
   const handleCreateAccount = () => {
     router.push('/auth/signup')
   }
 
   return (
-    <div className="flex gap-4">
-      <button
-        onClick={handleSignIn}
-        className="px-6 py-3 rounded-full font-semibold text-sm text-white bg-white/10 border-2 border-white/30 backdrop-blur-xl transition-all duration-300 hover:bg-white/20 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-white/50"
-      >
-        Sign In
-      </button>
-      <button
-        onClick={handleCreateAccount}
-        className="px-6 py-3 rounded-full font-semibold text-sm text-white bg-gradient-to-r from-blue-400 to-cyan-400 shadow-lg shadow-blue-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
-      >
-        Create Account
-      </button>
+    <div className="flex flex-col gap-2 items-center">
+      {error && (
+        <div className="text-red-200 bg-red-700/80 px-4 py-2 rounded mb-2 text-sm text-center max-w-xs">
+          {error}
+        </div>
+      )}
+      <div className="flex gap-4">
+        <button
+          onClick={handleSignIn}
+          className="px-6 py-3 rounded-full font-semibold text-sm text-white bg-white/10 border-2 border-white/30 backdrop-blur-xl transition-all duration-300 hover:bg-white/20 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-white/50"
+        >
+          Sign In
+        </button>
+        <button
+          onClick={handleCreateAccount}
+          className="px-6 py-3 rounded-full font-semibold text-sm text-white bg-gradient-to-r from-blue-400 to-cyan-400 shadow-lg shadow-blue-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+        >
+          Create Account
+        </button>
+      </div>
     </div>
   )
 }
