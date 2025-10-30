@@ -3,6 +3,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { storeSchema, getCachedPDF, cachePDF } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
+import Tesseract from 'tesseract.js';
+import { createCanvas } from 'canvas';
 
 // Set up PDF.js worker
 if (typeof window === 'undefined') {
@@ -22,6 +24,8 @@ interface SchemaGenResponse {
   raw_text?: string;
   pages?: number;
   is_scanned?: boolean;
+  ocr_conf?: number;
+  issues?: string[];
   error?: string;
 }
 
@@ -75,14 +79,113 @@ function loadExamUrls(): Record<string, string> {
 }
 
 /**
+ * Perform OCR on a scanned PDF page
+ * @param pdfDocument - The PDF document
+ * @returns Object containing OCR extracted text and confidence
+ */
+async function performOCR(pdfDocument: any): Promise<{
+  text: string;
+  confidence: number;
+  issues: string[];
+}> {
+  const OCR_TIMEOUT = 10000; // 10 seconds
+  const issues: string[] = [];
+
+  try {
+    // Get the first page for OCR
+    const page = await pdfDocument.getPage(1);
+    const viewport = page.getViewport({ scale: 1.5 });
+
+    // Create canvas for rendering
+    const canvas = createCanvas(viewport.width, viewport.height);
+    const context = canvas.getContext('2d');
+
+    // Render PDF page to canvas
+    await page.render({
+      canvasContext: context,
+      viewport: viewport,
+    }).promise;
+
+    // Create OCR worker with timeout
+    // Tesseract.js will use CDN by default for worker files
+    const ocrPromise = (async () => {
+      const worker = await Tesseract.createWorker('eng');
+
+      try {
+        const { data } = await worker.recognize(canvas.toDataURL());
+        await worker.terminate();
+        return { text: data.text, confidence: data.confidence };
+      } catch (error) {
+        await worker.terminate();
+        throw error;
+      }
+    })();
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('OCR timeout')), OCR_TIMEOUT)
+    );
+
+    const result = await Promise.race([ocrPromise, timeoutPromise]);
+
+    // Check confidence and add issues if needed
+    if (result.confidence < 70) {
+      issues.push('Low OCR confidence—manual review recommended');
+    }
+
+    return {
+      text: result.text,
+      confidence: result.confidence,
+      issues,
+    };
+  } catch (error) {
+    console.error('OCR failed:', error);
+    issues.push('OCR processing failed—using regex fallback');
+    return {
+      text: '',
+      confidence: 0,
+      issues,
+    };
+  }
+}
+
+/**
+ * Fallback regex extraction for common form fields
+ * @param raw_text - The text to extract from
+ * @returns Extracted field-value pairs
+ */
+function regexFallback(raw_text: string): string {
+  const patterns = [
+    /(Roll No|Roll Number|Application No):\s*(\S+)/gi,
+    /(Date of Birth|DOB):\s*(\S+)/gi,
+    /(Name|Candidate Name):\s*([A-Za-z\s]+)/gi,
+    /(Email|E-mail):\s*(\S+)/gi,
+    /(Phone|Mobile|Contact):\s*(\d{10})/gi,
+  ];
+
+  const matches: string[] = [];
+  patterns.forEach((pattern) => {
+    const found = raw_text.matchAll(pattern);
+    for (const match of found) {
+      matches.push(`${match[1]}: ${match[2]}`);
+    }
+  });
+
+  return matches.length > 0
+    ? matches.join('\n')
+    : 'No structured data found with regex patterns';
+}
+
+/**
  * Extract text from PDF using pdf.js
  * @param pdfData - The PDF data as ArrayBuffer
- * @returns Object containing raw_text, pages count, and is_scanned flag
+ * @returns Object containing raw_text, pages count, is_scanned flag, and OCR data
  */
 async function extractTextFromPDF(pdfData: ArrayBuffer): Promise<{
   raw_text: string;
   pages: number;
   is_scanned: boolean;
+  ocr_conf?: number;
+  issues?: string[];
 }> {
   try {
     const loadingTask = pdfjsLib.getDocument({ data: pdfData });
@@ -109,10 +212,39 @@ async function extractTextFromPDF(pdfData: ArrayBuffer): Promise<{
     // Determine if scanned based on text length
     const is_scanned = fullText.trim().length < 1000;
 
+    // If scanned, perform OCR
+    if (is_scanned) {
+      console.log('Scanned PDF detected, performing OCR...');
+      const ocrResult = await performOCR(pdfDocument);
+
+      // If OCR succeeded, use OCR text
+      if (ocrResult.text && ocrResult.text.trim().length > 0) {
+        fullText = ocrResult.text;
+        return {
+          raw_text: fullText,
+          pages: numPages,
+          is_scanned: true,
+          ocr_conf: ocrResult.confidence,
+          issues: ocrResult.issues,
+        };
+      } else {
+        // Fallback to regex extraction
+        console.log('OCR failed, using regex fallback...');
+        const regexText = regexFallback(fullText);
+        return {
+          raw_text: regexText,
+          pages: numPages,
+          is_scanned: true,
+          ocr_conf: 0,
+          issues: ['OCR failed, regex fallback used'],
+        };
+      }
+    }
+
     return {
       raw_text: fullText,
       pages: numPages,
-      is_scanned,
+      is_scanned: false,
     };
   } catch (error) {
     throw new Error(
@@ -179,7 +311,7 @@ export default async function handler(
     }
 
     // Extract text from PDF
-    const { raw_text, pages, is_scanned } = await extractTextFromPDF(pdfData);
+    const { raw_text, pages, is_scanned, ocr_conf, issues } = await extractTextFromPDF(pdfData);
 
     // Store schema with partial data (stub layout for now)
     await storeSchema(exam_form, {
@@ -187,6 +319,8 @@ export default async function handler(
       raw_text,
       pages,
       is_scanned,
+      ocr_conf,
+      issues,
       layout: {}, // Stub layout for now
       timestamp: Date.now(),
     });
@@ -197,6 +331,8 @@ export default async function handler(
       raw_text,
       pages,
       is_scanned,
+      ocr_conf,
+      issues,
     });
   } catch (error) {
     console.error('Schema generation error:', error);
