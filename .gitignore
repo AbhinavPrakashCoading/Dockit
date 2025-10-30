@@ -45,3 +45,5 @@ storybook-static/
 public/models/*.onnx
 public/models/distilbert/
 public/models/layoutlm/
+.vercel
+public/models/*.onnx

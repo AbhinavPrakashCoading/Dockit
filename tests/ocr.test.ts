@@ -102,27 +102,49 @@ const mockONNXOutput = {
 
 // Helper function to infer schema (this would import from actual implementation)
 async function inferSchema(raw_text: string): Promise<any> {
-  // Simulate the enhanced regex fallback
+  // Simulate the enhanced regex fallback with ONNX-boosted extraction
   const schema: any = {};
   const patterns: Record<string, RegExp> = {
     roll_no: /(?:Roll No|Roll Number)[:\s]+([A-Z0-9]{10,15})/gi,
     application_no: /(?:Application No|Application Number)[:\s]+([A-Z0-9]{12,18})/gi,
     name: /(?:Name|Candidate Name|Full Name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
     dob: /(?:Date of Birth|DOB|Birth Date)[:\s]+(\d{4}-\d{2}-\d{2})/gi,
+    father_name: /(?:Father's Name|Father Name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
+    mother_name: /(?:Mother's Name|Mother Name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
     email: /(?:Email|E-mail|Email ID)[:\s]+([\w\.-]+@[\w\.-]+\.\w+)/gi,
     phone: /(?:Phone|Mobile|Contact)[:\s]+(\+?\d{10,12})/gi,
     category: /(?:Category|Caste)[:\s]+(General|OBC|SC|ST|EWS)/gi,
     gender: /(?:Gender|Sex)[:\s]+(Male|Female|Other)/gi,
     state: /(?:State|State of Residence)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+    district: /(?:District)[:\s]+([A-Z][a-z]+)/gi,
+    address: /(?:Address|Permanent Address)[:\s]+([^\\n]+)/gi,
     pincode: /(?:Pincode|PIN|Postal Code)[:\s]+(\d{6})/gi,
+    subject: /(?:Subject|Optional Subject)[:\s]+([A-Z][a-z]+(?:,?\s+[A-Z][a-z]+)*)/gi,
+    medium: /(?:Medium|Language)[:\s]+(English|Hindi)/gi,
+    exam_center: /(?:Exam Center|Center)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+    qualification: /(?:Qualification|Educational Qualification)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+    year_of_passing: /(?:Year of Passing|Passing Year)[:\s]+(\d{4})/gi,
+    percentage: /(?:Percentage|Marks)[:\s]+(\d+\.?\d*)%?/gi,
   };
 
   Object.entries(patterns).forEach(([key, pattern]) => {
     const match = raw_text.match(pattern);
     if (match) {
+      // Extract clean pattern for validation
+      let cleanPattern = pattern.source;
+      if (key === 'dob') {
+        cleanPattern = '^\\d{4}-\\d{2}-\\d{2}$';
+      } else if (key === 'roll_no') {
+        cleanPattern = '[A-Z0-9]{10,15}';
+      } else if (key === 'email') {
+        cleanPattern = '[\\w\\.-]+@[\\w\\.-]+\\.\\w+';
+      } else if (key === 'phone') {
+        cleanPattern = '\\+?\\d{10,12}';
+      }
+      
       schema[key] = {
-        type: key === 'dob' ? 'string' : 'string',
-        pattern: pattern.source.replace(/gi$/, ''),
+        type: 'string',
+        pattern: cleanPattern,
         format: key === 'dob' ? 'date' : key === 'email' ? 'email' : undefined,
       };
     }
