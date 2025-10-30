@@ -13,15 +13,26 @@ interface SchemaDB extends DBSchema {
     };
     indexes: { 'by-timestamp': number };
   };
+  pdfCache: {
+    key: string; // URL of the cached PDF
+    value: {
+      url: string;
+      data: ArrayBuffer;
+      timestamp: number;
+    };
+    indexes: { 'by-timestamp': number };
+  };
 }
 
 /**
  * Database name and version
  */
 const DB_NAME = 'dockit-schemas';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented for new pdfCache store
 const SCHEMA_STORE = 'schemas';
+const PDF_CACHE_STORE = 'pdfCache';
 const MAX_SCHEMAS = 50;
+const PDF_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 /**
  * Initialize and return the IndexedDB connection
@@ -39,6 +50,16 @@ export const dbPromise: Promise<IDBPDatabase<SchemaDB>> = openDB<SchemaDB>(
         
         // Create index for timestamp-based queries
         store.createIndex('by-timestamp', 'timestamp');
+      }
+      
+      // Create the PDF cache object store if it doesn't exist
+      if (!db.objectStoreNames.contains(PDF_CACHE_STORE)) {
+        const cacheStore = db.createObjectStore(PDF_CACHE_STORE, {
+          keyPath: 'url',
+        });
+        
+        // Create index for timestamp-based queries and cleanup
+        cacheStore.createIndex('by-timestamp', 'timestamp');
       }
     },
   }
@@ -215,6 +236,94 @@ export async function getSchemaCount(): Promise<number> {
   } catch (error) {
     throw new Error(
       `Failed to get schema count: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+}
+
+/**
+ * Store a PDF in the cache with 24h TTL
+ * @param url - The URL of the PDF
+ * @param data - The PDF data as ArrayBuffer
+ */
+export async function cachePDF(url: string, data: ArrayBuffer): Promise<void> {
+  try {
+    const db = await dbPromise;
+    await db.put(PDF_CACHE_STORE, {
+      url,
+      data,
+      timestamp: Date.now(),
+    });
+    
+    // Clean up expired cache entries
+    await cleanExpiredPDFCache();
+  } catch (error) {
+    console.error('Failed to cache PDF:', error);
+    // Non-critical, so we don't throw
+  }
+}
+
+/**
+ * Retrieve a cached PDF if it exists and is not expired
+ * @param url - The URL of the PDF
+ * @returns The cached PDF data or null if not found or expired
+ */
+export async function getCachedPDF(url: string): Promise<ArrayBuffer | null> {
+  try {
+    const db = await dbPromise;
+    const cached = await db.get(PDF_CACHE_STORE, url);
+    
+    if (!cached) {
+      return null;
+    }
+    
+    // Check if cache is expired (24 hours)
+    const age = Date.now() - cached.timestamp;
+    if (age > PDF_CACHE_TTL) {
+      // Delete expired cache
+      await db.delete(PDF_CACHE_STORE, url);
+      return null;
+    }
+    
+    return cached.data;
+  } catch (error) {
+    console.error('Failed to retrieve cached PDF:', error);
+    return null;
+  }
+}
+
+/**
+ * Clean up expired PDF cache entries
+ */
+async function cleanExpiredPDFCache(): Promise<void> {
+  try {
+    const db = await dbPromise;
+    const allCached = await db.getAllFromIndex(
+      PDF_CACHE_STORE,
+      'by-timestamp'
+    );
+    
+    const now = Date.now();
+    for (const entry of allCached) {
+      const age = now - entry.timestamp;
+      if (age > PDF_CACHE_TTL) {
+        await db.delete(PDF_CACHE_STORE, entry.url);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to clean expired PDF cache:', error);
+  }
+}
+
+/**
+ * Clear all cached PDFs
+ */
+export async function clearPDFCache(): Promise<void> {
+  try {
+    const db = await dbPromise;
+    await db.clear(PDF_CACHE_STORE);
+  } catch (error) {
+    throw new Error(
+      `Failed to clear PDF cache: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
 }
