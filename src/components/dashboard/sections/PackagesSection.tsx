@@ -77,9 +77,9 @@ const PackagesSection: React.FC<PackagesSectionProps> = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Document ZIP Packages</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Document ZIPs</h1>
           <p className="text-gray-600 mt-1">
-            Create and manage document ZIP packages for exam submissions.
+            Create and manage document ZIPs for exam submissions.
           </p>
         </div>
         <button
@@ -98,7 +98,7 @@ const PackagesSection: React.FC<PackagesSectionProps> = ({
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search ZIP packages..."
+              placeholder="Search ZIPs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -139,7 +139,7 @@ const PackagesSection: React.FC<PackagesSectionProps> = ({
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            <span className="ml-2 text-gray-600">Loading ZIP packages...</span>
+            <span className="ml-2 text-gray-600">Loading ZIPs...</span>
           </div>
         ) : error ? (
           <div className="text-center py-8 text-red-500">
@@ -155,7 +155,7 @@ const PackagesSection: React.FC<PackagesSectionProps> = ({
         ) : zipPackages.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No ZIP packages created yet</p>
+            <p className="text-sm">No ZIPs created yet</p>
             <p className="text-xs text-gray-400 mt-1">Create your first ZIP package to get started</p>
           </div>
         ) : (

@@ -204,119 +204,123 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       }`}
       onClick={handleCardClick}
     >
-      <div className="p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          {/* Selection Checkbox */}
-          {onSelect && (
-            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-              isSelected 
-                ? 'bg-purple-600 border-purple-600' 
-                : 'bg-white border-gray-300 hover:border-purple-400'
-            }`}>
-              {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
-            </div>
-          )}
+      <div className="p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            {/* Selection Checkbox */}
+            {onSelect && (
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                isSelected 
+                  ? 'bg-purple-600 border-purple-600' 
+                  : 'bg-white border-gray-300 hover:border-purple-400'
+              }`}>
+                {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
+            )}
 
-          {/* Thumbnail or Icon */}
-          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center relative">
-            {doc.thumbnail ? (
-              <img 
-                src={doc.thumbnail} 
-                alt={doc.name} 
-                className="w-full h-full rounded-lg object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
+            {/* Thumbnail or Icon */}
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center relative flex-shrink-0">
+              {doc.thumbnail ? (
+                <img 
+                  src={doc.thumbnail} 
+                  alt={doc.name} 
+                  className="w-full h-full rounded-lg object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <FileText className="w-5 h-5 text-gray-600" />
+              )}
+              {doc.location === 'drive' && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                  <Cloud className="w-2 h-2 text-white" />
+                </div>
+              )}
+            </div>
+
+            {/* Document Info */}
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-gray-900 truncate" title={doc.name}>{doc.name}</h4>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-gray-500 mt-1">
+                <span className="truncate">{doc.examType}</span>
+                <span className="hidden sm:inline">•</span>
+                <span>{formatFileSize(doc.size)}</span>
+                <span className="hidden sm:inline">•</span>
+                <span>{doc.uploadDate}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-4">
+            {/* Quality Score */}
+            {doc.validationScore && (
+              <div className="text-center sm:text-right flex-shrink-0">
+                <div className="text-sm font-medium text-gray-900">{doc.validationScore}%</div>
+                <div className="text-xs text-gray-500">Quality</div>
+              </div>
+            )}
+
+            {/* Status */}
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(doc.status)} flex items-center gap-1 flex-shrink-0`}>
+              {getStatusIcon(doc.status)}
+              <span className="capitalize hidden sm:inline">{doc.status}</span>
+            </div>
+
+            {/* Actions Menu */}
+            <div className="relative flex-shrink-0">
+              <button 
+                className="p-2 hover:bg-gray-100 rounded-lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowActions(!showActions);
                 }}
-              />
-            ) : (
-              <FileText className="w-5 h-5 text-gray-600" />
-            )}
-            {doc.location === 'drive' && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                <Cloud className="w-2 h-2 text-white" />
-              </div>
-            )}
-          </div>
+              >
+                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+              </button>
 
-          {/* Document Info */}
-          <div>
-            <h4 className="font-medium text-gray-900">{doc.name}</h4>
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
-              <span>{doc.examType}</span>
-              <span>{formatFileSize(doc.size)}</span>
-              <span>{doc.uploadDate}</span>
+              {showActions && (
+                <div className="absolute right-0 top-10 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10">
+                  {onView && (
+                    <button
+                      onClick={(e) => handleActionClick(e, () => onView(doc))}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </button>
+                  )}
+                  {onDownload && (
+                    <button
+                      onClick={(e) => handleActionClick(e, () => onDownload(doc))}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </button>
+                  )}
+                  {onEdit && (
+                    <button
+                      onClick={(e) => handleActionClick(e, () => onEdit(doc))}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={(e) => handleActionClick(e, () => onDelete(doc))}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          {/* Quality Score */}
-          {doc.validationScore && (
-            <div className="text-right">
-              <div className="text-sm font-medium text-gray-900">{doc.validationScore}%</div>
-              <div className="text-xs text-gray-500">Quality</div>
-            </div>
-          )}
-
-          {/* Status */}
-          <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(doc.status)} flex items-center gap-1`}>
-            {getStatusIcon(doc.status)}
-            <span className="capitalize">{doc.status}</span>
-          </div>
-
-          {/* Actions Menu */}
-          <div className="relative">
-            <button 
-              className="p-2 hover:bg-gray-100 rounded-lg"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowActions(!showActions);
-              }}
-            >
-              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-            </button>
-
-            {showActions && (
-              <div className="absolute right-0 top-10 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10">
-                {onView && (
-                  <button
-                    onClick={(e) => handleActionClick(e, () => onView(doc))}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm"
-                  >
-                    <Eye className="w-4 h-4" />
-                    View
-                  </button>
-                )}
-                {onDownload && (
-                  <button
-                    onClick={(e) => handleActionClick(e, () => onDownload(doc))}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </button>
-                )}
-                {onEdit && (
-                  <button
-                    onClick={(e) => handleActionClick(e, () => onEdit(doc))}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    onClick={(e) => handleActionClick(e, () => onDelete(doc))}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>

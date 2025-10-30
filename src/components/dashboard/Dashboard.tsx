@@ -231,7 +231,7 @@ const DashboardContent: React.FC<{
           id: `auto-zip-error-${Date.now()}`,
           type: 'warning',
           title: 'ZIP Creation Failed',
-          message: 'Processing completed successfully, but automatic ZIP creation failed. You can create packages manually in the ZIP Packages section.',
+          message: 'Processing completed successfully, but automatic ZIP creation failed. You can create packages manually in the ZIPs section.',
           timestamp: new Date()
         });
       }
@@ -328,7 +328,11 @@ const DashboardContent: React.FC<{
         sidebarCollapsed={sidebarCollapsed}
         notifications={notifications}
       />
-      <main className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} pt-20`}>
+      <main className={`
+        pt-14 pb-16 lg:pb-0
+        ${sidebarCollapsed ? 'md:ml-16 xl:ml-16' : 'md:ml-64 xl:ml-64'}
+        lg:pt-20
+      `}>
         <div className="p-8">
           {renderContent()}
         </div>

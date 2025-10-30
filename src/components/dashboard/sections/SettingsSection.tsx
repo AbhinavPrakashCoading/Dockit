@@ -259,7 +259,7 @@ const SettingsSection: React.FC<DashboardSectionProps> = ({ user, onSectionChang
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-full">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600 mt-1">

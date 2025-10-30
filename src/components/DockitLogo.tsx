@@ -17,18 +17,11 @@ interface DockitLogoProps {
   textClassName?: string;
 }
 
-const sizeClasses = {
-  sm: 'w-5 h-5',
-  md: 'w-8 h-8', 
-  lg: 'w-10 h-10',
-  xl: 'w-12 h-12'
-};
-
-const textSizeClasses = {
-  sm: 'text-sm',
-  md: 'text-lg',
-  lg: 'text-xl', 
-  xl: 'text-2xl'
+const sizeConfig = {
+  sm: { logo: 24, text: 24, spacing: 12 }, // 24px logo, 24px text, 12px spacing (mobile small)
+  md: { logo: 32, text: 32, spacing: 16 }, // 32px logo, 32px text, 16px spacing (mobile header)
+  lg: { logo: 36, text: 36, spacing: 18 }, // 36px logo, 36px text, 18px spacing (tablet sidebar)
+  xl: { logo: 36, text: 36, spacing: 18 }  // 36px logo, 36px text, 18px spacing (desktop - max size)
 };
 
 export const DockitLogo: React.FC<DockitLogoProps> = ({ 
@@ -40,16 +33,16 @@ export const DockitLogo: React.FC<DockitLogoProps> = ({
   showText = false,
   textClassName = ''
 }) => {
-  const sizeClass = sizeClasses[size];
-  const textSizeClass = textSizeClasses[size];
+  const config = sizeConfig[size];
 
   if (variant === 'icon') {
     return (
-      <div className={`${className} flex items-center gap-3`}>
+      <div className={`${className} flex items-center`} style={{ gap: `${config.spacing}px` }}>
         {/* Logo Icon */}
         <button
           onClick={onLogoClick}
-          className={`${sizeClass} relative hover:shadow-md transition-shadow`}
+          className="relative hover:shadow-md transition-shadow"
+          style={{ width: `${config.logo}px`, height: `${config.logo}px` }}
           title="Toggle Menu"
         >
           <Image
@@ -74,18 +67,10 @@ export const DockitLogo: React.FC<DockitLogoProps> = ({
         {showText && (
           <button
             onClick={onTextClick}
-            className={`${textSizeClass} font-bold transition-all duration-200 ${textClassName}`}
+            className={`font-inter font-bold transition-all duration-200 md:block hidden ${textClassName}`}
             style={{
-              background: 'linear-gradient(to right, #8B5CF6, #3B82F6)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(to right, #7C3AED, #2563EB)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(to right, #8B5CF6, #3B82F6)';
+              fontSize: `${config.text}px`,
+              color: '#7E22CE'
             }}
             title="Go to Overview"
           >
@@ -97,10 +82,10 @@ export const DockitLogo: React.FC<DockitLogoProps> = ({
   }
 
   return (
-    <div className={`${className} relative flex items-center`}>
-      <div className={`${sizeClass} relative mr-3`}>
+    <div className={`${className} relative flex items-center`} style={{ gap: `${config.spacing}px` }}>
+      <div className="relative" style={{ width: `${config.logo}px`, height: `${config.logo}px` }}>
         <Image
-          src="/logos/main/dockit-logo-full.png"
+          src="/logo.svg"
           alt="DocKit"
           fill
           className="object-contain"
@@ -121,12 +106,10 @@ export const DockitLogo: React.FC<DockitLogoProps> = ({
         />
       </div>
       <span 
-        className={`${textSizeClass} font-bold`}
+        className="font-inter font-bold md:block hidden"
         style={{
-          background: 'linear-gradient(to right, #8B5CF6, #3B82F6)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
+          fontSize: `${config.text}px`,
+          color: '#7E22CE'
         }}
       >
         DocKit

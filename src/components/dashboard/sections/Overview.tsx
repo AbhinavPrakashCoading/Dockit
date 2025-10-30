@@ -38,13 +38,14 @@ const Overview: React.FC<OverviewProps> = ({
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 md:space-y-8 min-h-full">
+      {/* Welcome Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             Welcome back, {getUserDisplayName()}!
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 text-sm md:text-base">
             {user.isAuthenticated 
               ? "Here's what's happening with your documents today."
               : "You're in guest mode. Files are processed locally and not saved permanently."
@@ -55,10 +56,10 @@ const Overview: React.FC<OverviewProps> = ({
           onClick={() => {
             onSectionChange('packages');
           }}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2"
+          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-6 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30"
         >
           <Package className="w-4 h-4" />
-          Generate Zip
+          <span>Generate Zip</span>
         </button>
       </div>
 
@@ -90,8 +91,8 @@ const Overview: React.FC<OverviewProps> = ({
         </div>
       )}
 
-      {/* Quick Stats - Guest Mode Style */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatsCard
           title="Total Documents"
           value={documents.length.toString()}
@@ -126,61 +127,80 @@ const Overview: React.FC<OverviewProps> = ({
         />
       </div>
 
-      {/* Generate ZIP Package - Prominent Gradient Banner */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white">
-        <div className="flex items-center justify-between">
+      {/* Generate ZIP Banner */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 md:p-8 shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h3 className="text-xl font-bold mb-2">Generate ZIP Package</h3>
-            <p className="text-purple-100">Create document packages for exam submissions</p>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+              Generate ZIP Package
+            </h2>
+            <p className="text-purple-100 text-sm md:text-base">
+              Create document packages for exam submissions
+            </p>
           </div>
           <button
             onClick={() => {
               onSectionChange('packages');
               setCurrentStep?.('exam-selector');
             }}
-            className="bg-white text-purple-600 px-6 py-3 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+            className="bg-white text-purple-600 hover:bg-gray-50 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors shadow-lg"
           >
             <Package className="w-5 h-5" />
-            Generate Package
+            <span>Generate Package</span>
           </button>
         </div>
       </div>
 
-      {/* Quick Actions - Guest Mode Style */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <button 
             onClick={() => onSectionChange('upload')}
-            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left hover:scale-105 hover:-translate-y-1 hover:border-purple-300 hover:bg-purple-50 hover:shadow-lg"
+            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow group cursor-pointer"
           >
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
-              <Plus className="w-4 h-4 text-purple-600" />
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+              <Plus className="w-6 h-6 text-purple-600" />
             </div>
-            <h4 className="font-medium text-gray-900">Upload Documents</h4>
-            <p className="text-sm text-gray-600 mt-1">Start processing your documents</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-purple-600 transition-colors">
+              Upload Documents
+            </h3>
+            <p className="text-sm text-gray-600">Start processing your documents</p>
+            <div className="flex items-center gap-1 text-purple-600 text-sm font-medium mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span>Get started</span>
+            </div>
           </button>
 
           <button 
             onClick={() => onSectionChange('documents')}
-            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left hover:scale-105 hover:-translate-y-1 hover:border-blue-300 hover:bg-blue-50 hover:shadow-lg"
+            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow group cursor-pointer"
           >
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
-              <FileText className="w-4 h-4 text-blue-600" />
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+              <FileText className="w-6 h-6 text-blue-600" />
             </div>
-            <h4 className="font-medium text-gray-900">View Documents</h4>
-            <p className="text-sm text-gray-600 mt-1">Manage your document library</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+              View Documents
+            </h3>
+            <p className="text-sm text-gray-600">Manage your document library</p>
+            <div className="flex items-center gap-1 text-blue-600 text-sm font-medium mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span>Get started</span>
+            </div>
           </button>
 
           <button 
             onClick={() => onSectionChange('analytics')}
-            className="p-4 border-2 border-gray-200 rounded-lg transition-all duration-300 text-left hover:scale-105 hover:-translate-y-1 hover:border-orange-300 hover:bg-orange-50 hover:shadow-lg"
+            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow group cursor-pointer"
           >
-            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3 transition-colors duration-300">
-              <BarChart3 className="w-4 h-4 text-orange-600" />
+            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4">
+              <BarChart3 className="w-6 h-6 text-orange-600" />
             </div>
-            <h4 className="font-medium text-gray-900">View Analytics</h4>
-            <p className="text-sm text-gray-600 mt-1">Track processing performance</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-orange-600 transition-colors">
+              View Analytics
+            </h3>
+            <p className="text-sm text-gray-600">Track processing performance</p>
+            <div className="flex items-center gap-1 text-orange-600 text-sm font-medium mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span>Get started</span>
+            </div>
           </button>
         </div>
       </div>

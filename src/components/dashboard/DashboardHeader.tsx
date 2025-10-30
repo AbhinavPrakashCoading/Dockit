@@ -35,11 +35,11 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   };
 
   return (
-    <div className={`fixed top-0 right-0 left-0 bg-white border-b border-gray-200 z-20 transition-all duration-300 ${
+    <div className={`hidden lg:flex fixed top-0 right-0 left-0 bg-white border-b border-gray-200 z-20 transition-all duration-300 ${
       sidebarCollapsed ? 'ml-16' : 'ml-64'
     }`}>
-      <div className="flex items-center justify-end px-6 py-4">
-        <div className="flex items-center space-x-4">
+      <div className="flex items-center px-6 py-4 w-full">
+        <div className="flex items-center space-x-4 ml-auto">
           {/* Notifications */}
           <div className="relative">
             <button

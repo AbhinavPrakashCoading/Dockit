@@ -43,7 +43,7 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-full">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
         <p className="text-gray-600 mt-1">
