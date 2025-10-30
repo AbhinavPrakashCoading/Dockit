@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import * as pdfjsLib from 'pdfjs-dist';
-import { storeSchema, getCachedPDF, cachePDF } from '@/lib/db';
+import { storeSchema, getCachedPDF, cachePDF } from '../../src/lib/db';
 import fs from 'fs';
 import path from 'path';
 import Tesseract from 'tesseract.js';
 import { createCanvas } from 'canvas';
+import Ajv from 'ajv';
 
 // Set up PDF.js worker
 if (typeof window === 'undefined') {
@@ -27,6 +28,20 @@ interface SchemaGenResponse {
   ocr_conf?: number;
   issues?: string[];
   error?: string;
+  schema?: any;
+  coverage?: number;
+}
+
+interface InferredField {
+  type: string;
+  pattern?: string;
+  format?: string;
+  description?: string;
+  confidence?: number;
+}
+
+interface SchemaOutput {
+  [key: string]: InferredField;
 }
 
 /**
@@ -176,6 +191,289 @@ function regexFallback(raw_text: string): string {
 }
 
 /**
+ * Enhanced regex patterns for schema generation with fallback
+ * @param raw_text - The text to extract from
+ * @returns Schema object with inferred fields
+ */
+function enhancedRegexFallback(raw_text: string): SchemaOutput {
+  const schema: SchemaOutput = {};
+  
+  const patterns = {
+    roll_no: /(?:Roll No|Roll Number|Application No)[:\s]+([A-Z0-9]{6,12})/gi,
+    application_no: /(?:Application No|Application Number)[:\s]+([A-Z0-9]{8,15})/gi,
+    dob: /(?:Date of Birth|DOB|Birth Date)[:\s]+(\d{4}-\d{2}-\d{2}|\d{2}[-/]\d{2}[-/]\d{4})/gi,
+    name: /(?:Name|Candidate Name|Full Name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
+    email: /(?:Email|E-mail|Email ID)[:\s]+([\w\.-]+@[\w\.-]+\.\w+)/gi,
+    phone: /(?:Phone|Mobile|Contact)[:\s]+(\+?\d{10,12})/gi,
+    address: /(?:Address|Permanent Address)[:\s]+([\w\s,.-]+(?:\d{6}))/gi,
+    category: /(?:Category|Caste)[:\s]+(General|OBC|SC|ST|EWS)/gi,
+    gender: /(?:Gender|Sex)[:\s]+(Male|Female|Other)/gi,
+    father_name: /(?:Father's Name|Father Name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
+    mother_name: /(?:Mother's Name|Mother Name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
+    state: /(?:State|State of Residence)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+    district: /(?:District)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+    pincode: /(?:Pincode|PIN|Postal Code)[:\s]+(\d{6})/gi,
+    exam_center: /(?:Exam Center|Center)[:\s]+([\w\s,.-]+)/gi,
+    subject: /(?:Subject|Optional Subject)[:\s]+([\w\s]+)/gi,
+    medium: /(?:Medium|Language)[:\s]+(English|Hindi|[\w]+)/gi,
+    qualification: /(?:Qualification|Educational Qualification)[:\s]+([\w\s]+)/gi,
+    year_of_passing: /(?:Year of Passing|Passing Year)[:\s]+(\d{4})/gi,
+    percentage: /(?:Percentage|Marks)[:\s]+(\d{1,3}(?:\.\d{1,2})?%?)/gi,
+  };
+
+  Object.entries(patterns).forEach(([fieldName, pattern]) => {
+    const match = raw_text.match(pattern);
+    if (match && match.length > 0) {
+      // Determine field type based on pattern
+      let fieldType = 'string';
+      let format: string | undefined;
+      
+      if (fieldName === 'dob' || fieldName.includes('date')) {
+        fieldType = 'string';
+        format = 'date';
+      } else if (fieldName === 'email') {
+        fieldType = 'string';
+        format = 'email';
+      } else if (fieldName === 'phone' || fieldName === 'pincode') {
+        fieldType = 'string';
+        pattern.source.includes('\\d') && (format = 'numeric');
+      }
+
+      schema[fieldName] = {
+        type: fieldType,
+        pattern: pattern.source.replace(/\\/g, '\\\\').replace(/gi$/, ''),
+        ...(format && { format }),
+        description: `Extracted via regex from ${fieldName.replace(/_/g, ' ')}`,
+        confidence: 0.6, // Lower confidence for regex extraction
+      };
+    }
+  });
+
+  return schema;
+}
+
+/**
+ * Lazy-load ONNX runtime and perform inference
+ * This function loads the ONNX models only when needed
+ */
+let onnxSession: any = null;
+let transformerPipeline: any = null;
+
+async function loadONNXModels(): Promise<void> {
+  if (onnxSession && transformerPipeline) {
+    return; // Already loaded
+  }
+
+  try {
+    console.log('Loading ONNX models...');
+    const startTime = Date.now();
+
+    // Check if running in browser or Node.js
+    if (typeof window !== 'undefined') {
+      // Browser environment - use onnxruntime-web
+      const onnxModule = await import('onnxruntime-web');
+      const { InferenceSession } = onnxModule;
+
+      // Try to create session with WebGL, fallback to CPU
+      try {
+        onnxSession = await InferenceSession.create('/models/layoutlm.onnx', {
+          executionProviders: ['webgl', 'cpu'],
+        });
+        console.log('✅ ONNX session created with WebGL');
+      } catch (error) {
+        console.warn('⚠️  WebGL unavailable; using CPU', error);
+        onnxSession = await InferenceSession.create('/models/layoutlm.onnx', {
+          executionProviders: ['cpu'],
+        });
+      }
+    } else {
+      // Node.js environment - models not loaded (API route)
+      console.log('⚠️  ONNX inference not available in Node.js API route');
+    }
+
+    const loadTime = Date.now() - startTime;
+    if (loadTime > 5000) {
+      console.warn(`⚠️  Model loading took ${loadTime}ms (>5s)`);
+    }
+
+    console.log(`✅ ONNX models loaded in ${loadTime}ms`);
+  } catch (error) {
+    console.error('❌ Failed to load ONNX models:', error);
+    throw error;
+  }
+}
+
+/**
+ * Tokenize text using @xenova/transformers
+ * @param raw_text - The text to tokenize
+ * @returns Tokenized output
+ */
+async function tokenizeText(raw_text: string): Promise<any> {
+  try {
+    if (!transformerPipeline) {
+      const { pipeline } = await import('@xenova/transformers');
+      // Use a lighter model for token classification
+      transformerPipeline = await pipeline(
+        'token-classification',
+        'Xenova/bert-base-NER'
+      );
+    }
+
+    const tokens = await transformerPipeline(raw_text);
+    return tokens;
+  } catch (error) {
+    console.error('Tokenization failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Perform ONNX inference for schema generation
+ * @param raw_text - The extracted text from PDF
+ * @returns Inferred schema with fields
+ */
+async function inferSchemaWithONNX(
+  raw_text: string
+): Promise<{ schema: SchemaOutput; coverage: number; issues: string[] }> {
+  const issues: string[] = [];
+  let schema: SchemaOutput = {};
+
+  try {
+    // Tokenize the text
+    const tokens = await tokenizeText(raw_text);
+    
+    if (!tokens || tokens.length === 0) {
+      issues.push('Tokenization failed; using regex fallback');
+      schema = enhancedRegexFallback(raw_text);
+    } else {
+      // Extract entities from token classification
+      const entities = tokens.filter((token: any) => token.score > 0.7);
+      
+      // Build schema from entities
+      entities.forEach((entity: any) => {
+        const fieldName = entity.entity.toLowerCase().replace('b-', '').replace('i-', '');
+        
+        if (!schema[fieldName]) {
+          schema[fieldName] = {
+            type: inferFieldType(entity.word, fieldName),
+            description: `Extracted via NER: ${entity.entity}`,
+            confidence: entity.score,
+          };
+
+          // Add pattern based on entity type
+          if (fieldName === 'per' || fieldName === 'person') {
+            schema.name = schema[fieldName];
+            delete schema[fieldName];
+          } else if (fieldName === 'loc' || fieldName === 'location') {
+            schema.address = schema[fieldName];
+            delete schema[fieldName];
+          } else if (fieldName === 'date') {
+            schema.dob = {
+              type: 'string',
+              format: 'date',
+              description: 'Date field extracted',
+              confidence: entity.score,
+            };
+          }
+        }
+      });
+
+      // If schema is still empty or too few fields, use regex fallback
+      if (Object.keys(schema).length < 5) {
+        issues.push('Low entity extraction; enhancing with regex');
+        const regexSchema = enhancedRegexFallback(raw_text);
+        schema = { ...regexSchema, ...schema };
+      }
+    }
+
+    // Calculate coverage (assuming 20 standard fields for forms)
+    const EXPECTED_FIELDS = 20;
+    const coverage = Math.min(
+      (Object.keys(schema).length / EXPECTED_FIELDS) * 100,
+      100
+    );
+
+    // If coverage is too low, use enhanced regex fallback
+    if (coverage < 70) {
+      issues.push('Low coverage (<70%); regex fallback used');
+      const regexSchema = enhancedRegexFallback(raw_text);
+      schema = { ...schema, ...regexSchema };
+      
+      // Recalculate coverage
+      const newCoverage = Math.min(
+        (Object.keys(schema).length / EXPECTED_FIELDS) * 100,
+        100
+      );
+      return { schema, coverage: newCoverage, issues };
+    }
+
+    return { schema, coverage, issues };
+  } catch (error) {
+    console.error('ONNX inference error:', error);
+    issues.push('ONNX inference failed; using regex fallback');
+    schema = enhancedRegexFallback(raw_text);
+    
+    const coverage = Math.min(
+      (Object.keys(schema).length / 20) * 100,
+      100
+    );
+    
+    return { schema, coverage, issues };
+  }
+}
+
+/**
+ * Infer field type from value and field name
+ * @param value - The value to analyze
+ * @param fieldName - The field name
+ * @returns The inferred type
+ */
+function inferFieldType(value: string, fieldName: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value) || fieldName.includes('date')) {
+    return 'string'; // Date format
+  } else if (/^\d+$/.test(value)) {
+    return 'number';
+  } else if (/^(true|false)$/i.test(value)) {
+    return 'boolean';
+  } else if (/^[\w\.-]+@[\w\.-]+\.\w+$/.test(value)) {
+    return 'string'; // Email format
+  }
+  return 'string';
+}
+
+/**
+ * Validate schema using AJV
+ * @param schema - The schema to validate
+ * @returns Validation result
+ */
+function validateSchema(schema: SchemaOutput): { valid: boolean; errors?: any[] } {
+  const ajv = new Ajv();
+  
+  // Create a JSON Schema for validation
+  const jsonSchema = {
+    type: 'object',
+    properties: Object.fromEntries(
+      Object.entries(schema).map(([key, value]) => [
+        key,
+        {
+          type: value.type,
+          ...(value.pattern && { pattern: value.pattern }),
+          ...(value.format && { format: value.format }),
+        },
+      ])
+    ),
+  };
+
+  try {
+    const validate = ajv.compile(jsonSchema);
+    const valid = validate({});
+    return { valid: true, errors: validate.errors || [] };
+  } catch (error) {
+    return { valid: false, errors: [error] };
+  }
+}
+
+/**
  * Extract text from PDF using pdf.js
  * @param pdfData - The PDF data as ArrayBuffer
  * @returns Object containing raw_text, pages count, is_scanned flag, and OCR data
@@ -311,18 +609,36 @@ export default async function handler(
     }
 
     // Extract text from PDF
-    const { raw_text, pages, is_scanned, ocr_conf, issues } = await extractTextFromPDF(pdfData);
+    const { raw_text, pages, is_scanned, ocr_conf, issues: extractionIssues = [] } = await extractTextFromPDF(pdfData);
 
-    // Store schema with partial data (stub layout for now)
+    // Perform schema inference with ONNX
+    console.log('Performing schema inference...');
+    const { schema, coverage, issues: inferenceIssues } = await inferSchemaWithONNX(raw_text);
+
+    // Combine all issues
+    const allIssues = [...extractionIssues, ...inferenceIssues];
+    
+    // Add low OCR confidence issue if applicable
+    if (ocr_conf !== undefined && ocr_conf < 70) {
+      allIssues.push('Low OCR confidence; regex fallback used');
+    }
+
+    // Validate the generated schema
+    const validation = validateSchema(schema);
+    if (!validation.valid) {
+      allIssues.push('Schema validation warnings present');
+    }
+
+    // Store schema with inferred data
     await storeSchema(exam_form, {
-      exam_form,
       raw_text,
       pages,
       is_scanned,
       ocr_conf,
-      issues,
+      issues: allIssues,
+      schema,
+      coverage,
       layout: {}, // Stub layout for now
-      timestamp: Date.now(),
     });
 
     return res.status(200).json({
@@ -332,7 +648,9 @@ export default async function handler(
       pages,
       is_scanned,
       ocr_conf,
-      issues,
+      issues: allIssues,
+      schema,
+      coverage,
     });
   } catch (error) {
     console.error('Schema generation error:', error);

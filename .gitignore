@@ -40,3 +40,8 @@ storybook-static/
 /playwright/.cache/
 
 /.npm-only-allow
+
+# ONNX models (large files)
+public/models/*.onnx
+public/models/distilbert/
+public/models/layoutlm/
