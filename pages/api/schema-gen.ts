@@ -9,9 +9,11 @@ import Ajv from 'ajv';
 
 // Set up PDF.js worker
 if (typeof window === 'undefined') {
-  // Server-side: Use legacy build for Node.js
-  const pdfjsWorker = require('pdfjs-dist/legacy/build/pdf.worker.entry');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+  // Server-side: Use worker from public directory
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+} else {
+  // Client-side: Use worker from public directory
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
 
 interface SchemaGenRequest {

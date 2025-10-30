@@ -90,7 +90,7 @@
     "next-auth": "^4.24.11",
     "onnxruntime-web": "^1.23.0",
     "pdf-parse": "^2.2.6",
-    "pdfjs-dist": "^5.4.149",
+    "pdfjs-dist": "^4.7.76",
     "pg": "^8.16.3",
     "playwright": "^1.55.0",
     "postcss": "^8.5.3",
