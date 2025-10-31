@@ -3,6 +3,7 @@
 
 import toast from 'react-hot-toast';
 import JSZip from 'jszip';
+import Ajv from 'ajv';
 import { hybridStorage } from '@/features/storage/HybridStorageService';
 import { 
   documentAwareImageProcessor, 
@@ -17,6 +18,7 @@ import {
   documentTypeVerifier,
   DocumentVerificationResult
 } from '@/features/verification/DocumentTypeVerifier';
+import { getSchema } from '@/lib/schemaRegistry';
 
 // Dynamically import PDF.js only on client side
 let pdfjsLib: any = null;
@@ -168,6 +170,43 @@ class EnhancedDocumentProcessingService {
       throw new Error(`Template not found: ${templateId}`);
     }
 
+    // Hook: Get schema data with fallback to schema-gen API
+    let schemaData: any = null;
+    try {
+      schemaData = await getSchema(templateId);
+      
+      // Check if schema is sufficient (has at least 10 fields)
+      const fieldCount = schemaData?.schema?.properties 
+        ? Object.keys(schemaData.schema.properties).length 
+        : Object.keys(schemaData?.schema || {}).length;
+        
+      if (!schemaData?.schema || fieldCount < 10) {
+        console.warn('Schema insufficient, generating via API...');
+        
+        const res = await fetch('/api/schema-gen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ exam_form: templateId })
+        });
+        
+        if (res.ok) {
+          schemaData = await res.json();
+          const genFieldCount = schemaData.schema?.properties 
+            ? Object.keys(schemaData.schema.properties).length 
+            : Object.keys(schemaData.schema || {}).length;
+          toast.success(`📋 Generated schema with ${genFieldCount} fields`);
+        } else {
+          console.warn('Schema generation failed, using fallback empty schema');
+          schemaData = { schema: {} };
+          toast('⚠️ Using fallback schema - validation may be limited', { icon: '⚠️' });
+        }
+      }
+    } catch (error) {
+      console.error('Schema fetch error:', error);
+      schemaData = { schema: {} };
+      toast('⚠️ Schema loading failed - proceeding with basic validation', { icon: '⚠️' });
+    }
+
     toast.success('Starting real document processing...');
     
     const processedFiles: ProcessedFile[] = [];
@@ -199,7 +238,7 @@ class EnhancedDocumentProcessingService {
           duration: 4000
         });
         
-        const validations = this.validateFile(file, template);
+        const validations = this.validateFile(file, template, schemaData);
         let processedFile: ProcessedFile = {
           originalName: file.name,
           processedName: `processed_${file.name}`,
@@ -500,7 +539,7 @@ class EnhancedDocumentProcessingService {
     return URL.createObjectURL(zipBlob);
   }
 
-  private validateFile(file: File, template: SimpleTemplate): FileValidation[] {
+  private validateFile(file: File, template: SimpleTemplate, schemaData?: any): FileValidation[] {
     const validations: FileValidation[] = [];
 
     // Auto-detect document type for more accurate validation
@@ -514,6 +553,38 @@ class EnhancedDocumentProcessingService {
       message: `Detected document type: ${detectedType} (${typeConfig.category})`,
       severity: 'info'
     });
+
+    // AJV Schema Validation (if schema available)
+    if (schemaData?.schema && Object.keys(schemaData.schema).length > 0) {
+      try {
+        const ajv = new Ajv({ allErrors: true, verbose: true });
+        
+        // Build extractedFields object from file metadata
+        const extractedFields: Record<string, any> = {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          detectedType: detectedType
+        };
+        
+        const valid = ajv.validate(schemaData.schema, extractedFields);
+        
+        validations.push({
+          rule: 'schema_compliance',
+          passed: valid,
+          message: valid ? 'Schema compliant ✓' : ajv.errorsText(),
+          severity: valid ? 'info' : 'error'
+        });
+      } catch (ajvError) {
+        console.warn('AJV validation error:', ajvError);
+        validations.push({
+          rule: 'schema_compliance',
+          passed: false,
+          message: `Schema validation error: ${ajvError instanceof Error ? ajvError.message : 'Unknown error'}`,
+          severity: 'warning'
+        });
+      }
+    }
 
     // Find matching requirement in template
     const requirement = template.requirements.find(req => 

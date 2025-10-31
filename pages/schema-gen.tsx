@@ -44,10 +44,12 @@ export default function SchemaGenPage() {
   const [issues, setIssues] = useState<string[]>([]);
   const [examForm, setExamForm] = useState<string>('');
   const [valReport, setValReport] = useState<ValidationReport | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    setCurrentStep(0);
 
     try {
       const formData = new FormData(e.currentTarget);
@@ -55,30 +57,53 @@ export default function SchemaGenPage() {
       
       setExamForm(data.exam_form as string);
 
-      const res = await fetch('/api/schema-gen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      // Step 1: Fetch PDF
+      setCurrentStep(1);
+      
+      // Use toast.promise for better UX
+      const result = await toast.promise(
+        (async () => {
+          const res = await fetch('/api/schema-gen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
 
-      if (!res.ok) {
-        throw new Error(`API Error: ${res.statusText}`);
-      }
+          if (!res.ok) {
+            throw new Error(`API Error: ${res.statusText}`);
+          }
 
-      const result = await res.json() as {
-        schema?: SchemaOutput;
-        coverage?: number;
-        issues?: string[];
-      };
+          // Step 2: OCR/Parse
+          setCurrentStep(2);
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          const jsonResult = await res.json() as {
+            schema?: SchemaOutput;
+            coverage?: number;
+            issues?: string[];
+          };
+
+          // Step 3: Infer Fields
+          setCurrentStep(3);
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Step 4: Build Schema
+          setCurrentStep(4);
+          
+          return jsonResult;
+        })(),
+        {
+          loading: 'Step 1: Fetching PDF...',
+          success: (data) => `Schema ready: ${data.coverage || 0}% coverage`,
+          error: (err) => `Generation failed: ${err.message}`
+        }
+      );
       
       setSchema(result.schema || {});
       setCoverage(result.coverage || 0);
       setIssues(result.issues || []);
-      
-      toast.success('Schema generated successfully!');
     } catch (error) {
       console.error('Schema generation error:', error);
-      toast.error('Failed to generate schema');
     } finally {
       setLoading(false);
     }
@@ -136,16 +161,18 @@ export default function SchemaGenPage() {
         type: 'application/pdf',
       });
 
-      const valRes = await schemaProcessingService.processFiles(
-        [mockFile],
-        examForm
+      const valRes = await toast.promise(
+        schemaProcessingService.processFiles([mockFile], examForm),
+        {
+          loading: 'Testing schema validation...',
+          success: (data) => `Test completed: ${data.validationReport.complianceScore}% compliant`,
+          error: (err) => `Test failed: ${err.message}`
+        }
       );
       
       setValReport(valRes.validationReport);
-      toast.success('Test completed!');
     } catch (error) {
       console.error('Test error:', error);
-      toast.error('Test failed');
     }
   };
 
@@ -157,6 +184,33 @@ export default function SchemaGenPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
           Schema Generator
         </h1>
+
+        {/* Stepper Section */}
+        {loading && (
+          <div
+            className="stepper flex justify-between mb-8"
+            role="progressbar"
+            aria-valuenow={currentStep}
+            aria-valuemax={4}
+            aria-label="Generation Steps"
+          >
+            {['Fetch PDF', 'OCR/Parse', 'Infer Fields', 'Build Schema'].map((s, i) => (
+              <span
+                key={i}
+                className={`p-2 rounded ${
+                  i < currentStep
+                    ? 'bg-green-500'
+                    : i === currentStep
+                    ? 'bg-blue-500'
+                    : 'bg-gray-300'
+                } text-white text-sm font-medium`}
+                aria-hidden="true"
+              >
+                {i + 1}. {s}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Form Section */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
