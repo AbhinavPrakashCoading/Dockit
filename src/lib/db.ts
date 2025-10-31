@@ -34,36 +34,51 @@ const PDF_CACHE_STORE = 'pdfCache';
 const MAX_SCHEMAS = 50;
 const PDF_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
+// Lazy initialization to prevent SSR issues
+let _dbPromise: Promise<IDBPDatabase<SchemaDB>> | null = null;
+
 /**
  * Initialize and return the IndexedDB connection
+ * Only initializes in browser environment
  */
-export const dbPromise: Promise<IDBPDatabase<SchemaDB>> = openDB<SchemaDB>(
-  DB_NAME,
-  DB_VERSION,
-  {
-    upgrade(db: IDBPDatabase<SchemaDB>) {
-      // Create the schemas object store if it doesn't exist
-      if (!db.objectStoreNames.contains(SCHEMA_STORE)) {
-        const store = db.createObjectStore(SCHEMA_STORE, {
-          keyPath: 'exam_form',
-        });
-        
-        // Create index for timestamp-based queries
-        store.createIndex('by-timestamp', 'timestamp');
-      }
-      
-      // Create the PDF cache object store if it doesn't exist
-      if (!db.objectStoreNames.contains(PDF_CACHE_STORE)) {
-        const cacheStore = db.createObjectStore(PDF_CACHE_STORE, {
-          keyPath: 'url',
-        });
-        
-        // Create index for timestamp-based queries and cleanup
-        cacheStore.createIndex('by-timestamp', 'timestamp');
-      }
-    },
+function getDbPromise(): Promise<IDBPDatabase<SchemaDB>> {
+  // Check if running in browser
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('IndexedDB not available in SSR'));
   }
-);
+  
+  if (!_dbPromise) {
+    _dbPromise = openDB<SchemaDB>(
+      DB_NAME,
+      DB_VERSION,
+      {
+        upgrade(db: IDBPDatabase<SchemaDB>) {
+          // Create the schemas object store if it doesn't exist
+          if (!db.objectStoreNames.contains(SCHEMA_STORE)) {
+            const store = db.createObjectStore(SCHEMA_STORE, {
+              keyPath: 'exam_form',
+            });
+            
+            // Create index for timestamp-based queries
+            store.createIndex('by-timestamp', 'timestamp');
+          }
+          
+          // Create the PDF cache object store if it doesn't exist
+          if (!db.objectStoreNames.contains(PDF_CACHE_STORE)) {
+            const cacheStore = db.createObjectStore(PDF_CACHE_STORE, {
+              keyPath: 'url',
+            });
+            
+            // Create index for timestamp-based queries and cleanup
+            cacheStore.createIndex('by-timestamp', 'timestamp');
+          }
+        },
+      }
+    );
+  }
+  
+  return _dbPromise;
+}
 
 /**
  * Store a schema in IndexedDB
@@ -76,7 +91,7 @@ export async function storeSchema(
   schema: Record<string, any>
 ): Promise<void> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     
     // Check if we need to prune old entries
     const count = await db.count(SCHEMA_STORE);
@@ -96,7 +111,7 @@ export async function storeSchema(
       error.name === 'QuotaExceededError' ||
       error.message?.includes('quota')
     ) {
-      const db = await dbPromise;
+      const db = await getDbPromise();
       await pruneOldSchemas(db);
       
       // Retry once after pruning
@@ -128,7 +143,7 @@ export async function getSchema(
   examForm: string
 ): Promise<{ exam_form: string; schema: Record<string, any> } | null> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     const result = await db.get(SCHEMA_STORE, examForm);
     
     if (!result) {
@@ -155,7 +170,7 @@ export async function getAllSchemas(): Promise<
   Array<{ exam_form: string; schema: Record<string, any>; timestamp: number }>
 > {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     return await db.getAll(SCHEMA_STORE);
   } catch (error) {
     throw new Error(
@@ -170,7 +185,7 @@ export async function getAllSchemas(): Promise<
  */
 export async function deleteSchema(examForm: string): Promise<void> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     await db.delete(SCHEMA_STORE, examForm);
   } catch (error) {
     throw new Error(
@@ -184,7 +199,7 @@ export async function deleteSchema(examForm: string): Promise<void> {
  */
 export async function clearAllSchemas(): Promise<void> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     await db.clear(SCHEMA_STORE);
   } catch (error) {
     throw new Error(
@@ -231,7 +246,7 @@ async function pruneOldSchemas(db: IDBPDatabase<SchemaDB>): Promise<void> {
  */
 export async function getSchemaCount(): Promise<number> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     return await db.count(SCHEMA_STORE);
   } catch (error) {
     throw new Error(
@@ -247,7 +262,7 @@ export async function getSchemaCount(): Promise<number> {
  */
 export async function cachePDF(url: string, data: ArrayBuffer): Promise<void> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     await db.put(PDF_CACHE_STORE, {
       url,
       data,
@@ -269,7 +284,7 @@ export async function cachePDF(url: string, data: ArrayBuffer): Promise<void> {
  */
 export async function getCachedPDF(url: string): Promise<ArrayBuffer | null> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     const cached = await db.get(PDF_CACHE_STORE, url);
     
     if (!cached) {
@@ -296,7 +311,7 @@ export async function getCachedPDF(url: string): Promise<ArrayBuffer | null> {
  */
 async function cleanExpiredPDFCache(): Promise<void> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     const allCached = await db.getAllFromIndex(
       PDF_CACHE_STORE,
       'by-timestamp'
@@ -319,7 +334,7 @@ async function cleanExpiredPDFCache(): Promise<void> {
  */
 export async function clearPDFCache(): Promise<void> {
   try {
-    const db = await dbPromise;
+    const db = await getDbPromise();
     await db.clear(PDF_CACHE_STORE);
   } catch (error) {
     throw new Error(
