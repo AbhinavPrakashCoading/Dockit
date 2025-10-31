@@ -101,7 +101,6 @@
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.3.8",
     "react-hot-toast": "^2.6.0",
-    "sharp": "0.32.6",
     "simple-statistics": "^7.8.8",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.4.14",
@@ -138,6 +137,7 @@
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "8.21.0",
+    "@vercel/build-utils": "^12.2.3",
     "@vitejs/plugin-react": "^4.7.0",
     "@vitest/ui": "^3.2.4",
     "all-contributors-cli": "^6.26.1",
@@ -178,7 +178,8 @@
     "onlyBuiltDependencies": [
       "@prisma/client",
       "@prisma/engines",
-      "prisma"
+      "prisma",
+      "canvas"
     ]
   }
 }

@@ -1,7 +1,8 @@
 import { spawn } from 'child_process'
 import { promises as fs } from 'fs'
 import path from 'path'
-import sharp from 'sharp'
+// Note: sharp removed for Vercel compatibility
+// Enhancement pipeline temporarily disabled for MVP - Canvas API used instead
 import { EnhancementStep, EnhancementType, MLToolConfig, DEFAULT_ML_CONFIG } from './types'
 
 /**
@@ -110,33 +111,17 @@ export class DocumentEnhancementPipeline {
   }
 
   /**
-   * 1. UPSCALING using ESRGAN or Sharp
+   * 1. UPSCALING - Passthrough mode for MVP (sharp removed for Vercel)
    */
   private async upscaleImage(buffer: Buffer): Promise<{ buffer: Buffer; toolUsed: string; parameters: any }> {
-    if (this.config.esrganEnabled) {
-      // Try ESRGAN first (requires Python setup)
-      try {
-        return await this.esrganUpscale(buffer)
-      } catch (error) {
-        console.warn('ESRGAN failed, falling back to Sharp:', error)
-      }
-    }
-
-    // Fallback to Sharp (built-in Node.js)
-    const upscaleFactor = 2
-    const enhanced = await sharp(buffer)
-      .resize({ 
-        width: undefined, 
-        height: undefined,
-        kernel: sharp.kernel.lanczos3 
-      })
-      .jpeg({ quality: 95 })
-      .toBuffer()
-
+    // MVP: Enhancement disabled - returns original buffer
+    // TODO: Implement with Canvas API or WASM-based solution
+    console.warn('⚠️  Image upscaling disabled for MVP (sharp removed for Vercel compatibility)')
+    
     return {
-      buffer: enhanced,
-      toolUsed: 'Sharp-Lanczos3',
-      parameters: { factor: upscaleFactor, kernel: 'lanczos3' }
+      buffer,
+      toolUsed: 'Passthrough-MVP',
+      parameters: { note: 'Enhancement disabled for Vercel deployment' }
     }
   }
 
@@ -180,72 +165,35 @@ export class DocumentEnhancementPipeline {
   }
 
   /**
-   * 2. DENOISING using Sharp
+   * 2. DENOISING - Passthrough mode for MVP
    */
   private async denoiseImage(buffer: Buffer): Promise<{ buffer: Buffer; toolUsed: string; parameters: any }> {
-    const enhanced = await sharp(buffer)
-      .median(3) // Median filter for noise reduction
-      .jpeg({ quality: 90 })
-      .toBuffer()
-
-    return {
-      buffer: enhanced,
-      toolUsed: 'Sharp-MedianFilter',
-      parameters: { kernelSize: 3 }
-    }
+    console.warn('⚠️  Image denoising disabled for MVP')
+    return { buffer, toolUsed: 'Passthrough-MVP', parameters: {} }
   }
 
   /**
-   * 3. CONTRAST ENHANCEMENT using Sharp
+   * 3. CONTRAST ENHANCEMENT - Passthrough mode for MVP
    */
   private async adjustContrast(buffer: Buffer): Promise<{ buffer: Buffer; toolUsed: string; parameters: any }> {
-    const enhanced = await sharp(buffer)
-      .normalize() // Auto-level contrast
-      .gamma(1.2) // Slight gamma correction
-      .jpeg({ quality: 92 })
-      .toBuffer()
-
-    return {
-      buffer: enhanced,
-      toolUsed: 'Sharp-Normalize',
-      parameters: { gamma: 1.2, normalize: true }
-    }
+    console.warn('⚠️  Contrast adjustment disabled for MVP')
+    return { buffer, toolUsed: 'Passthrough-MVP', parameters: {} }
   }
 
   /**
-   * 4. SHARPENING using Sharp
+   * 4. SHARPENING - Passthrough mode for MVP
    */
   private async sharpenImage(buffer: Buffer): Promise<{ buffer: Buffer; toolUsed: string; parameters: any }> {
-    const enhanced = await sharp(buffer)
-      .sharpen(1.0, 1.0, 2.0) // sigma, flat, jagged
-      .jpeg({ quality: 93 })
-      .toBuffer()
-
-    return {
-      buffer: enhanced,
-      toolUsed: 'Sharp-UnsharpMask',
-      parameters: { sigma: 1.0, flat: 1.0, jagged: 2.0 }
-    }
+    console.warn('⚠️  Image sharpening disabled for MVP')
+    return { buffer, toolUsed: 'Passthrough-MVP', parameters: {} }
   }
 
   /**
-   * 5. COLOR CORRECTION using Sharp
+   * 5. COLOR CORRECTION - Passthrough mode for MVP
    */
   private async correctColors(buffer: Buffer): Promise<{ buffer: Buffer; toolUsed: string; parameters: any }> {
-    const enhanced = await sharp(buffer)
-      .modulate({
-        brightness: 1.1,
-        saturation: 1.05,
-        hue: 0
-      })
-      .jpeg({ quality: 92 })
-      .toBuffer()
-
-    return {
-      buffer: enhanced,
-      toolUsed: 'Sharp-ColorBalance',
-      parameters: { brightness: 1.1, saturation: 1.05 }
-    }
+    console.warn('⚠️  Color correction disabled for MVP')
+    return { buffer, toolUsed: 'Passthrough-MVP', parameters: {} }
   }
 
   /**
@@ -305,55 +253,54 @@ export class DocumentEnhancementPipeline {
   }
 
   /**
-   * 7. FACE DETECTION using OpenCV (Python binding) or Sharp analysis
+   * 7. FACE DETECTION - Passthrough mode for MVP
    */
   private async detectFaces(buffer: Buffer): Promise<{ buffer: Buffer; toolUsed: string; parameters: any }> {
-    // Placeholder implementation - would use OpenCV Python or face-api.js
-    const metadata = await sharp(buffer).metadata()
-    
-    // Simple heuristic: assume face if image is roughly portrait sized
-    const aspectRatio = (metadata.width || 1) / (metadata.height || 1)
-    const likelyFace = aspectRatio > 0.6 && aspectRatio < 1.4
-
+    console.warn('⚠️  Face detection disabled for MVP')
     return {
       buffer,
-      toolUsed: 'Placeholder-FaceDetection',
+      toolUsed: 'Passthrough-MVP',
       parameters: {
-        facesDetected: likelyFace ? 1 : 0,
-        confidence: likelyFace ? 0.8 : 0.2,
-        boundingBoxes: likelyFace ? [{ x: 0.1, y: 0.1, width: 0.8, height: 0.8 }] : []
+        facesDetected: 0,
+        confidence: 0,
+        boundingBoxes: []
       }
     }
   }
 
   /**
-   * 8. DOCUMENT ANALYSIS
+   * 8. DOCUMENT ANALYSIS - Basic passthrough for MVP
    */
   private async analyzeDocument(buffer: Buffer, mimeType: string): Promise<{ buffer: Buffer; toolUsed: string; parameters: any }> {
-    const metadata = await sharp(buffer).metadata()
+    console.warn('⚠️  Document analysis simplified for MVP')
     
-    // Basic document analysis
+    // Basic metadata without image processing
+    const metadata = {
+      width: 0,
+      height: 0,
+      channels: 0,
+      hasAlpha: false,
+      density: 72,
+      format: mimeType.split('/')[1] || 'jpeg',
+    }
+    
     const analysis = {
-      dimensions: { width: metadata.width, height: metadata.height },
-      channels: metadata.channels,
-      hasAlpha: metadata.hasAlpha,
-      density: metadata.density,
+      dimensions: { width: 0, height: 0 },
+      channels: 0,
+      hasAlpha: false,
+      density: 72,
       format: metadata.format,
       size: buffer.length,
-      
-      // Document type heuristics
-      documentType: this.guessDocumentType(metadata, buffer.length),
-      quality: this.assessImageQuality(metadata),
-      
-      // Readability assessment
-      estimatedTextDensity: Math.random() * 0.8 + 0.1, // Placeholder
-      backgroundType: 'uniform', // Placeholder
-      recommendedEnhancements: this.recommendEnhancements(metadata)
+      documentType: 'document',
+      quality: 0.5,
+      estimatedTextDensity: 0.5,
+      backgroundType: 'uniform',
+      recommendedEnhancements: []
     }
 
     return {
       buffer,
-      toolUsed: 'DocumentAnalyzer-v1',
+      toolUsed: 'DocumentAnalyzer-MVP-Passthrough',
       parameters: analysis
     }
   }
