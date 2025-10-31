@@ -1,5 +1,21 @@
 {
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm run build",
+  "buildCommand": "pnpm install && pnpm build",
   "installCommand": "pnpm install --frozen-lockfile",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "pages/api/**/*.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
+  "build": {
+    "env": {
+      "SKIP_ENV_VALIDATION": "1",
+      "NEXT_TELEMETRY_DISABLED": "1"
+    }
+  }
 }
