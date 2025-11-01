@@ -1,4 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+// Allow runtime requires in server-only code paths without importing Node modules in client bundles
+declare const require: any;
 
 /**
  * IndexedDB Schema Definition for Schema Storage
@@ -36,6 +38,42 @@ const PDF_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 // Lazy initialization to prevent SSR issues
 let _dbPromise: Promise<IDBPDatabase<SchemaDB>> | null = null;
+
+/**
+ * Server-side fallback storage location for SSR (file-based)
+ */
+// Server-side fallback paths (initialized lazily to avoid client-side bundling issues)
+let SERVER_DATA_DIR: string | null = null;
+let SERVER_SCHEMA_FILE: string | null = null;
+let SERVER_PDF_INDEX: string | null = null;
+let SERVER_PDF_DIR: string | null = null;
+
+function ensureServerDirs() {
+  // Only run on server
+  if (typeof window !== 'undefined') return;
+
+  try {
+    // Lazy require to avoid bundling Node modules into client bundle
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = require('path');
+
+    if (!SERVER_DATA_DIR) SERVER_DATA_DIR = path.join(process.cwd(), '.dockit_data');
+    if (!SERVER_SCHEMA_FILE) SERVER_SCHEMA_FILE = path.join(SERVER_DATA_DIR!, 'schemas.json');
+    if (!SERVER_PDF_INDEX) SERVER_PDF_INDEX = path.join(SERVER_DATA_DIR!, 'pdf_index.json');
+    if (!SERVER_PDF_DIR) SERVER_PDF_DIR = path.join(SERVER_DATA_DIR!, 'pdf_cache');
+
+    if (!fs.existsSync(SERVER_DATA_DIR)) fs.mkdirSync(SERVER_DATA_DIR);
+    if (!fs.existsSync(SERVER_PDF_DIR)) fs.mkdirSync(SERVER_PDF_DIR);
+    if (!fs.existsSync(SERVER_SCHEMA_FILE)) fs.writeFileSync(SERVER_SCHEMA_FILE, JSON.stringify({}), 'utf-8');
+    if (!fs.existsSync(SERVER_PDF_INDEX)) fs.writeFileSync(SERVER_PDF_INDEX, JSON.stringify({}), 'utf-8');
+  } catch (e) {
+    // Ignore errors; best-effort fallback
+    // eslint-disable-next-line no-console
+    console.warn('Failed to ensure server dirs for fallback storage:', e);
+  }
+}
 
 /**
  * Initialize and return the IndexedDB connection
@@ -90,15 +128,32 @@ export async function storeSchema(
   examForm: string,
   schema: Record<string, any>
 ): Promise<void> {
+  // If running on server (SSR), use file-based fallback to avoid IndexedDB rejection
+  if (typeof window === 'undefined') {
+    try {
+      ensureServerDirs();
+      // runtime require to avoid bundling 'fs' into client
+      const fs = require('fs');
+      const content = fs.readFileSync(SERVER_SCHEMA_FILE!, 'utf-8');
+      const data = content ? JSON.parse(content) : {};
+      data[examForm] = { exam_form: examForm, schema, timestamp: Date.now() };
+      fs.writeFileSync(SERVER_SCHEMA_FILE!, JSON.stringify(data, null, 2), 'utf-8');
+      return;
+    } catch (err) {
+      console.warn('Server fallback: failed to store schema to file:', err);
+      return; // Non-fatal fallback
+    }
+  }
+
   try {
     const db = await getDbPromise();
-    
+
     // Check if we need to prune old entries
     const count = await db.count(SCHEMA_STORE);
     if (count >= MAX_SCHEMAS) {
       await pruneOldSchemas(db);
     }
-    
+
     // Store the schema with timestamp
     await db.put(SCHEMA_STORE, {
       exam_form: examForm,
@@ -113,7 +168,7 @@ export async function storeSchema(
     ) {
       const db = await getDbPromise();
       await pruneOldSchemas(db);
-      
+
       // Retry once after pruning
       try {
         await db.put(SCHEMA_STORE, {
@@ -261,6 +316,28 @@ export async function getSchemaCount(): Promise<number> {
  * @param data - The PDF data as ArrayBuffer
  */
 export async function cachePDF(url: string, data: ArrayBuffer): Promise<void> {
+  // Server-side fallback: store PDF to filesystem cache
+  if (typeof window === 'undefined') {
+    try {
+      ensureServerDirs();
+      // runtime require to avoid bundling Node modules into client
+      const fs = require('fs');
+      const path = require('path');
+      const indexContent = fs.readFileSync(SERVER_PDF_INDEX!, 'utf-8');
+      const index = indexContent ? JSON.parse(indexContent) : {};
+      const filename = Buffer.from(url).toString('base64') + '.bin';
+      const filePath = path.join(SERVER_PDF_DIR!, filename);
+      // Write binary data
+      fs.writeFileSync(filePath, Buffer.from(new Uint8Array(data)));
+      index[url] = { filename, timestamp: Date.now() };
+      fs.writeFileSync(SERVER_PDF_INDEX!, JSON.stringify(index, null, 2), 'utf-8');
+      return;
+    } catch (err) {
+      console.warn('Server fallback: failed to cache PDF to file:', err);
+      return; // Non-fatal
+    }
+  }
+
   try {
     const db = await getDbPromise();
     await db.put(PDF_CACHE_STORE, {
@@ -283,6 +360,42 @@ export async function cachePDF(url: string, data: ArrayBuffer): Promise<void> {
  * @returns The cached PDF data or null if not found or expired
  */
 export async function getCachedPDF(url: string): Promise<ArrayBuffer | null> {
+  // Server-side fallback: read from filesystem cache
+  if (typeof window === 'undefined') {
+    try {
+      ensureServerDirs();
+      // runtime require to avoid bundling Node modules into client
+      const fs = require('fs');
+      const path = require('path');
+      const indexContent = fs.readFileSync(SERVER_PDF_INDEX!, 'utf-8');
+      const index = indexContent ? JSON.parse(indexContent) : {};
+      const entry = index[url];
+      if (!entry) return null;
+      const age = Date.now() - (entry.timestamp || 0);
+      if (age > PDF_CACHE_TTL) {
+        // delete expired
+        try {
+          fs.unlinkSync(path.join(SERVER_PDF_DIR!, entry.filename));
+        } catch (e) {
+          // ignore
+        }
+        delete index[url];
+        fs.writeFileSync(SERVER_PDF_INDEX!, JSON.stringify(index, null, 2), 'utf-8');
+        return null;
+      }
+
+      const filePath = path.join(SERVER_PDF_DIR!, entry.filename);
+      if (!fs.existsSync(filePath)) return null;
+      const buf = fs.readFileSync(filePath);
+      // Convert Buffer to ArrayBuffer
+      const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+      return arrayBuffer;
+    } catch (err) {
+      console.warn('Server fallback: failed to retrieve cached PDF from file:', err);
+      return null;
+    }
+  }
+
   try {
     const db = await getDbPromise();
     const cached = await db.get(PDF_CACHE_STORE, url);
